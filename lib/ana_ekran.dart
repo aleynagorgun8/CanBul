@@ -7,6 +7,7 @@ import 'package:supabase_flutter/supabase_flutter.dart'; // Supabase bağlantıs
 import 'package:google_maps_flutter/google_maps_flutter.dart'; // Koordinat işlemleri için
 import 'konum_sec_sayfasi.dart'; // Harita sayfamız
 import 'bildirimler.dart';
+import 'package:http/http.dart' as http; // Pubspec.yaml'a eklemeyi unutma!
 
 final supabase = Supabase.instance.client;
 
@@ -402,7 +403,12 @@ class _AnaEkranState extends State<AnaEkran> {
 
       await _fotograflariYukle(ilanId, 'kayip_ilanlar');
 
-      _basariliMesaj('Kayıp İlanı');
+      // YENİ: Python API'sini tetikle (İlk fotoğrafı gönderiyoruz)
+      pythonApiyeGonder(ilanId, secilenFotograflar[0].path, _secilenKayipKoordinat!, 'kayip');
+
+      // Kullanıcıya bilgi ver ve formu temizle
+      _analizBilgilendirmeGoster();
+      _formTemizle();
     } catch (e) {
       _hataMesaji(e.toString());
     } finally {
@@ -429,7 +435,12 @@ class _AnaEkranState extends State<AnaEkran> {
           .select('id').eq('kullanici_id', user.id).order('created_at', ascending: false).limit(1).single();
 
       await _fotograflariYukle(inserted['id'], 'bulunan_ilanlar');
-      _basariliMesaj('Bulunan İlanı');
+      // YENİ: Python API'sini tetikle
+      pythonApiyeGonder(inserted['id'], secilenFotograflar[0].path, _secilenBulunanKoordinat!, 'bulunan');
+
+      // Kullanıcıya bilgi ver ve formu temizle
+      _analizBilgilendirmeGoster();
+      _formTemizle();
     } catch (e) {
       _hataMesaji(e.toString());
     } finally {
@@ -513,6 +524,28 @@ class _AnaEkranState extends State<AnaEkran> {
       SnackBar(content: Text('Hata oluştu. Lütfen tekrar dene.'), backgroundColor: Colors.red, behavior: SnackBarBehavior.floating),
     );
   }
+  void _analizBilgilendirmeGoster() {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Text("Yapay Zeka Analizi 🧬", style: TextStyle(color: Color(0xFF002D72), fontWeight: FontWeight.bold)),
+          content: const Text(
+            "İlanınız başarıyla kaydedildi! Yapay zekamız şu an fotoğrafları analiz ediyor. Eşleşme bulduğumuzda size bildirim göndereceğiz. Bu pencereyi kapatabilirsiniz.",
+            style: TextStyle(fontSize: 14),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("TAMAM", style: TextStyle(color: Color(0xFF002D72), fontWeight: FontWeight.bold)),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   void _formTemizle({bool resetAll = true}) {
     hayvanAdController.clear();
@@ -541,22 +574,20 @@ class _AnaEkranState extends State<AnaEkran> {
     }
   }
 
-  // FOTOĞRAF UYARI METODU
   Widget _buildPhotoTipMessage() {
-    // Mesaj sadece Kayıp ve Bulunan ilan tiplerinde gösterilecek
-    if (_secilenIlanTipi != IlanTipi.kayip && _secilenIlanTipi != IlanTipi.bulunan) {
-      return const SizedBox.shrink(); // Sahiplendirme ise boş döner
+    // Sahiplendirme formunda göstermek istemiyorsan bu kontrol kalsın
+    if (_secilenIlanTipi == IlanTipi.sahiplendirme) {
+      return const SizedBox.shrink();
     }
 
-    final String mesaj = _secilenIlanTipi == IlanTipi.kayip
-        ? 'Dostunuzun **farklı açılardan ve belirgin özelliklerinin** olduğu fotoğraflarını yüklemek, yapay zeka destekli arama sisteminde bulunma ihtimalini **önemli ölçüde artırır**.'
-        : 'Bulduğunuz hayvanın **farklı açılardan ve belirgin özelliklerinin** olduğu fotoğraflarını yüklemek, sahibinin onu tanımasını ve yapay zeka ile eşleşmesini kolaylaştırır.';
+    // Sabit mesaj
+    const String sabitMesaj = 'Hayvanın **farklı açılardan ve belirgin özelliklerinin** olduğu fotoğraflarını yüklemek, yapay zeka destekli arama sisteminde bulunma ihtimalini **önemli ölçüde artırır**. Yüzünün net göründüğü fotoğraflar tercih edilmelidir.';
 
     return Container(
       padding: const EdgeInsets.all(12),
       margin: const EdgeInsets.only(top: 15, bottom: 5),
       decoration: BoxDecoration(
-        color: zeytinYesili.withOpacity(0.1), // Hafif yeşil arka plan
+        color: zeytinYesili.withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: zeytinYesili),
       ),
@@ -566,14 +597,9 @@ class _AnaEkranState extends State<AnaEkran> {
           Icon(Icons.lightbulb_outline, color: zeytinYesili, size: 24),
           const SizedBox(width: 8),
           Expanded(
-            child: Text.rich(
-              TextSpan(
-                children: [
-                  TextSpan(text: 'İpucu: ', style: TextStyle(fontWeight: FontWeight.bold, color:zeytinYesili)),
-                  TextSpan(text: mesaj.replaceAll('**', ''), style: TextStyle(color: gri.withOpacity(0.8), height: 1.3)),
-                ],
-              ),
-              style: const TextStyle(fontSize: 13),
+            child: Text(
+              sabitMesaj.replaceAll('**', ''), // Yıldızları temizler
+              style: TextStyle(fontSize: 13, color: gri.withOpacity(0.8), height: 1.3),
             ),
           ),
         ],
@@ -1075,5 +1101,25 @@ class _AnaEkranState extends State<AnaEkran> {
 
       ],
     );
+  }
+}
+// DOSYANIN EN ALTINA, CLASS DIŞINA YAPIŞTIR
+Future<void> pythonApiyeGonder(String ilanId, String fotoPath, LatLng konum, String tip) async {
+  try {
+    // BURAYA KENDİ BİLGİSAYARININ IP ADRESİNİ YAZMALISIN (Örn: 192.168.1.35)
+    var url = Uri.parse("http://192.168.0.8:8000/ilan-ver-ve-tara");    var request = http.MultipartRequest('POST', url);
+
+    request.fields['kullanici_id'] = Supabase.instance.client.auth.currentUser!.id;
+    request.fields['ilan_id'] = ilanId;
+    request.fields['ilan_tipi'] = tip;
+    request.fields['lat'] = konum.latitude.toString();
+    request.fields['lng'] = konum.longitude.toString();
+
+    request.files.add(await http.MultipartFile.fromPath('dosya', fotoPath));
+
+    await request.send();
+    print("🚀 Yapay Zeka Analizi Arka Planda Başlatıldı.");
+  } catch (e) {
+    print("❌ API Bağlantı Hatası: $e");
   }
 }
