@@ -1071,3 +1071,5 @@ class _AnaEkranState extends State<AnaEkran> {
     ]);
   }
 }
+
+//proje sonlandırıldı

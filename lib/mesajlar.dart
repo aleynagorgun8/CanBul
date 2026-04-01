@@ -607,5 +607,3 @@ class _SohbetEkraniState extends State<SohbetEkrani> {
     );
   }
 }
-
-//deneme
