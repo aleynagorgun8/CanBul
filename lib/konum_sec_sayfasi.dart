@@ -15,14 +15,14 @@ class _KonumSecSayfasiState extends State<KonumSecSayfasi> {
   LatLng? _secilenKonum;
   GoogleMapController? _mapController;
 
-  // Varsayılan Ankara (GPS kapalıysa veya izin yoksa)
+  
   final LatLng _varsayilanKonum = const LatLng(39.9334, 32.8597);
 
   @override
   void initState() {
     super.initState();
 
-    // YENİ: Eğer dışarıdan bir konum geldiyse (Profil düzenlemeden) onu seçili yap
+    
     if (widget.baslangicKonumu != null) {
       _secilenKonum = widget.baslangicKonumu;
     } else {
@@ -37,7 +37,7 @@ class _KonumSecSayfasiState extends State<KonumSecSayfasi> {
     }
 
     if (izin == LocationPermission.whileInUse || izin == LocationPermission.always) {
-      // Eğer düzenleme modundaysak (baslangicKonumu varsa) GPS'e zorla gitmesin, ilanın konumunda kalsın.
+      
       if (widget.baslangicKonumu != null) return;
 
       try {
@@ -67,7 +67,7 @@ class _KonumSecSayfasiState extends State<KonumSecSayfasi> {
             icon: const Icon(Icons.check, color: Colors.white),
             tooltip: "Seçimi Onayla",
             onPressed: () {
-              // Seçilen konumu geri gönder
+              
               if (_secilenKonum != null) {
                 Navigator.pop(context, _secilenKonum);
               } else {
@@ -89,19 +89,19 @@ class _KonumSecSayfasiState extends State<KonumSecSayfasi> {
             myLocationEnabled: true,
             myLocationButtonEnabled: true,
             onMapCreated: (controller) => _mapController = controller,
-            // Harita her hareket ettiğinde ortadaki noktayı al
+            
             onCameraMove: (CameraPosition position) {
               _secilenKonum = position.target;
             },
           ),
-          // EKRANIN TAM ORTASINA SABİT İĞNE
+          
           const Center(
             child: Padding(
-              padding: EdgeInsets.only(bottom: 40.0), // İğnenin ucu merkeze gelsin diye hafif yukarı
+              padding: EdgeInsets.only(bottom: 40.0), 
               child: Icon(Icons.location_on, size: 50, color: Colors.redAccent),
             ),
           ),
-          // Bilgilendirme Kartı
+          
           Positioned(
             bottom: 30,
             left: 20,

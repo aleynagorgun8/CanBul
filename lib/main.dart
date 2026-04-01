@@ -1,14 +1,14 @@
-import 'package:flutter/material.dart'; //flutterın arayüz bileşenleri için
-import 'package:font_awesome_flutter/font_awesome_flutter.dart'; //ikonlar için
-import 'package:supabase_flutter/supabase_flutter.dart'; //supabase import
-import 'giris_kayit.dart'; // giriş/kayıt ekranı import
-import 'ana_ekran.dart'; // Giriş yapıldıysa yönlendirilecek ekran
+import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'giris_kayit.dart';
+import 'ana_ekran.dart';
 import 'yapay_zeka_servisi.dart';
 
-void main() async {    //uygulama buradan başlıyor
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await Supabase.initialize(           //  Supabase bağlantısı
+  await Supabase.initialize(
     url: 'https://rhlsacfixmnsdcfnchul.supabase.co',
     anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJobHNhY2ZpeG1uc2RjZm5jaHVsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkzNDE0MzAsImV4cCI6MjA3NDkxNzQzMH0.5yCDlFL9er14Z5ZW7WgsaKrpd9o3At1_gbOMd9r0kd8',
   );
@@ -20,26 +20,26 @@ class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context) {  //açılış sayfanın başlangıcı
+  Widget build(BuildContext context) {
     return MaterialApp(
       title: 'CanBul - Evcil Hayvan Buluşma Platformu',
-      debugShowCheckedModeBanner: false,  //debug yazısını gizlemek için
-      theme: ThemeData(   //renk paketini yazı fontunu vb belirliyoruz
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.green,  //genel tema yeşil tonlarda olacak
+          seedColor: Colors.green,
           primary: const Color(0xFF558B2F),
           secondary: const Color(0xFFFFB74D),
           surface: Colors.white,
         ),
-        useMaterial3: true,   //modern arayüz
+        useMaterial3: true,
         fontFamily: 'Poppins',
       ),
-      home: const SplashScreen(),   //uygulama açıldığında ilk gösterilecek ekran
+      home: const SplashScreen(),
     );
   }
 }
 
-// Splash Screen
+
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -57,10 +57,10 @@ class _SplashScreenState extends State<SplashScreen>
   late Animation<double> _pulseAnimation;
 
   @override
-  void initState() { // DOĞRU KULLANIM: initState async olamaz, void dönmelidir.
+  void initState() {
     super.initState();
 
-    // 1. Animasyon controller'ları
+
     _scaleController = AnimationController(vsync: this, duration: const Duration(seconds: 2));
     _scaleAnimation = CurvedAnimation(parent: _scaleController, curve: Curves.easeInOut);
 
@@ -70,20 +70,20 @@ class _SplashScreenState extends State<SplashScreen>
     _fadeController = AnimationController(vsync: this, duration: const Duration(seconds: 2));
     _fadeAnimation = CurvedAnimation(parent: _fadeController, curve: Curves.easeIn);
 
-    // 2. Animasyon akışını başlatan fonksiyonu tetikliyoruz
+
     _startAnimations();
   }
 
-  // Animasyonların ve Model yüklemenin yapıldığı ana fonksiyon
+
   void _startAnimations() async {
     try {
       print("🚀 Animasyonlar başlıyor...");
 
-      // 1. Logo büyüme animasyonunu başlat ve bitmesini bekle
+
       await _scaleController.forward();
       _pulseController.repeat(reverse: true);
 
-      // 2. Yapay Zeka Modellerini Yükle
+
       print("🧠 [Yapay Zeka] Modeller yüklenmeye başlıyor...");
       try {
         YapayZekaServisi aiServisi = YapayZekaServisi();
@@ -93,13 +93,13 @@ class _SplashScreenState extends State<SplashScreen>
         print("🚨 [Yapay Zeka Hatası]: $aiError");
       }
 
-      // 3. Modeller yüklendikten sonra yazı animasyonunu başlat
+
       await _fadeController.forward();
 
-      // Kısa bir bekleme (Görsellik için)
+
       await Future.delayed(const Duration(seconds: 1));
 
-      // 4. Sayfa Yönlendirme Mantığı
+
       if (!mounted) return;
 
       Widget hedefSayfa;

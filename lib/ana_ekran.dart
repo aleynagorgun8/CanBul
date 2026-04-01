@@ -73,7 +73,7 @@ class _AnaEkranState extends State<AnaEkran> {
   final Color gri = const Color(0xFF9E9E9E);
   final Color koyuMavi = const Color(0xFF002D72);
 
-  // --- EĞİTİM HEDEFLERİ (KEYS) --- ✅
+  
   final GlobalKey _keyBaslik = GlobalKey();
   final GlobalKey _keyBilgiButonu = GlobalKey();
   final GlobalKey _keyBildirimler = GlobalKey();
@@ -82,7 +82,7 @@ class _AnaEkranState extends State<AnaEkran> {
   final GlobalKey _keyKonum = GlobalKey();
   final GlobalKey _keyEkstraBilgi = GlobalKey();
 
-  // Navbar Parçaları İçin Hedefler
+  
   final GlobalKey _keyNavAkis = GlobalKey();
   final GlobalKey _keyNavHarita = GlobalKey();
   final GlobalKey _keyNavIlanlar = GlobalKey();
@@ -781,7 +781,7 @@ class _AnaEkranState extends State<AnaEkran> {
                       ],
                     ),
                   ),
-                  // --- MÜHENDİSLİK DOKUNUŞU: İKONLAR KESİN SINIRLARLA İZOLE EDİLDİ --- ✅
+                  
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -795,7 +795,7 @@ class _AnaEkranState extends State<AnaEkran> {
                           onPressed: () => _egitimiBaslat(zorla: true),
                         ),
                       ),
-                      const SizedBox(width: 12), // Fiziksel ve aşılmaz bir duvar!
+                      const SizedBox(width: 12), 
                       if (Supabase.instance.client.auth.currentUser != null)
                         Container(
                           key: _keyBildirimler,
@@ -899,7 +899,7 @@ class _AnaEkranState extends State<AnaEkran> {
                 children: [
                   Expanded(child: Container(key: _keyNavAkis, color: Colors.transparent)),
                   Expanded(child: Container(key: _keyNavHarita, color: Colors.transparent)),
-                  Expanded(child: Container(color: Colors.transparent)), // Ana Ekran
+                  Expanded(child: Container(color: Colors.transparent)), 
                   Expanded(child: Container(key: _keyNavIlanlar, color: Colors.transparent)),
                   Expanded(child: Container(key: _keyNavProfil, color: Colors.transparent)),
                 ],
@@ -1072,4 +1072,3 @@ class _AnaEkranState extends State<AnaEkran> {
   }
 }
 
-//proje sonlandırıldı

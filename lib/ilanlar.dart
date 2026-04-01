@@ -2,15 +2,15 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:url_launcher/url_launcher.dart'; // Harici link başlatmak için
+import 'package:url_launcher/url_launcher.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:image_cropper/image_cropper.dart'; // KIRPMA İÇİN
+import 'package:image_cropper/image_cropper.dart';
 import 'dart:io';
-import 'dart:typed_data'; // WKB çözümü için
+import 'dart:typed_data';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:http/http.dart' as http; //Dosya indirmek için
-import 'package:path_provider/path_provider.dart'; //Geçici dosya yolu için
+import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
 
 import 'shared_bottom_nav.dart';
 import 'mesajlar.dart';
@@ -21,7 +21,7 @@ import 'package:timeago/timeago.dart' as timeago;
 
 final supabase = Supabase.instance.client;
 
-// --- SORGULAR ---
+
 
 const String _KAYIP_ILAN_SELECT_QUERY =
     'id, kullanici_id, hayvan_adi, hayvan_turu, hayvan_rengi, ekstra_bilgi, konum, konum_text, hayvan_cinsiyeti, cipi_var_mi, created_at, profiles(tam_ad, telefon)';
@@ -32,7 +32,7 @@ const String _BULUNAN_ILAN_SELECT_QUERY =
 const String _SAHIPLENDIRME_ILAN_SELECT_QUERY =
     'id, kullanici_id, hayvan_adi, hayvan_turu, hayvan_rengi, ekstra_bilgi, konum, konum_text, hayvan_cinsiyeti, cipi_var_mi, kisir_mi, kisirlastirma_sarti, aliskanliklar, created_at, profiles(tam_ad, telefon)';
 
-// --- YARDIMCI FONKSİYONLAR ---
+
 
 Future<List<String>> ilanAsilariniGetir(String ilanId, String ilanTipi) async {
   try {
@@ -113,12 +113,12 @@ Future<void> _ilanAsilariniGuncelle(String ilanId, List<String> yeniAsiIdleri, {
   }
 }
 
-// HARİTA.DART'TAN GELEN GÜVENİLİR KOORDİNAT ÇÖZÜMLEME METODU
+
 LatLng? _koordinatCozumle(dynamic data) {
   if (data == null) return null;
   String hexString = data.toString();
 
-  // POINT(lng lat) formatını kontrol et
+
   final RegExp regex = RegExp(r'POINT\(([-+]?\d*\.?\d+) ([-+]?\d*\.?\d+)\)');
   final match = regex.firstMatch(hexString);
   if (match != null && match.groupCount >= 2) {
@@ -131,10 +131,10 @@ LatLng? _koordinatCozumle(dynamic data) {
     }
   }
 
-  // WKB (Well Known Binary) formatını kontrol et (Daha karmaşık format)
+
   if (hexString.length > 20) {
     try {
-      // Hex string'i byte listesine çevirme
+
       List<int> bytes = [];
       for (int i = 0; i < hexString.length; i += 2) {
         if (i + 2 <= hexString.length) {
@@ -143,20 +143,20 @@ LatLng? _koordinatCozumle(dynamic data) {
       }
       final ByteData byteData = ByteData.sublistView(Uint8List.fromList(bytes));
 
-      // Endianness belirleme
+
       final bool isLittleEndian = byteData.getUint8(0) == 1;
       final Endian endian = isLittleEndian ? Endian.little : Endian.big;
 
-      // Offset (WKB yapısına göre koordinatların başlangıç yeri)
+
       int offset = 5;
       int type = byteData.getUint32(1, endian);
-      if ((type & 0x20000000) != 0) offset += 4; // Z/M değerleri varsa offset'i ayarla
+      if ((type & 0x20000000) != 0) offset += 4;
 
-      // 8 byte (Float64) olarak boylamı (x) ve enlemi (y) oku
+
       double x = byteData.getFloat64(offset, endian);
       double y = byteData.getFloat64(offset + 8, endian);
 
-      // LatLng(enlem, boylam) olarak döndür
+
       return LatLng(y, x);
     } catch (e) {
       debugPrint("WKB Çözümleme hatası: $e");
@@ -165,7 +165,7 @@ LatLng? _koordinatCozumle(dynamic data) {
   return null;
 }
 
-// --- VERİ MODELİ ---
+
 
 class Ilan {
   final String id;
@@ -175,8 +175,8 @@ class Ilan {
   final String hayvanTuru;
   final String hayvanRengi;
   final String ilanTipi;
-  final String sehir; // Temiz şehir/ilçe bilgisini tutar
-  final String? hamKonum; // POINT(...) verisini tutar
+  final String sehir;
+  final String? hamKonum;
   final List<String> fotoUrlListesi;
   final String telefonNumarasi;
   final String ekstraBilgi;
@@ -225,12 +225,12 @@ class Ilan {
     String konumVerisi = 'Konum Bilgisi Yok';
     String? rawKonum;
 
-    // HAM KONUM VERİSİNİ AYRI TUTUYORUZ
+
     if (data['konum'] != null) {
       rawKonum = data['konum'].toString();
     }
 
-    // GÖSTERİMDE KULLANILACAK TEMİZ ŞEHİR VERİSİ
+
     if (data['konum_text'] != null) {
       konumVerisi = data['konum_text'].toString();
     } else if (rawKonum != null) {
@@ -324,7 +324,7 @@ Future<List<Ilan>> tumIlanlariGetir() async {
   return ilanlar;
 }
 
-// --- SAYFA TASARIMI ---
+
 
 class IlanlarSayfasi extends StatefulWidget {
   const IlanlarSayfasi({super.key});
@@ -347,10 +347,10 @@ class _IlanlarSayfasiState extends State<IlanlarSayfasi> {
   bool _yukleniyor = true;
   String? _hataMesaji;
 
-  // FİLTRE DEĞİŞKENLERİ
+
   Map<String, Set<String>> _cityDistrictMap = {};
 
-  // İlan ID'sine göre çözümlenmiş "Şehir / İlçe" bilgisini tutar. Filtreleme buraya bakacak.
+
   Map<String, String> _cozumlenmisKonumlar = {};
 
   String? _selectedCity;
@@ -362,29 +362,29 @@ class _IlanlarSayfasiState extends State<IlanlarSayfasi> {
     _ilanlariYukle();
   }
 
-  // İlanlardaki şehir/ilçe verilerini haritaya yüklerken ID eşleşmesini de yapıyor
+
   Future<void> _loadCityAndDistrictData() async {
     Map<String, Set<String>> dropdownMap = {};
-    Map<String, String> idToLocationMap = {}; // Filtreleme için gerekli map
+    Map<String, String> idToLocationMap = {};
 
-    // Asenkron olarak tüm konum metinlerini çözmek için Future listesi
+
     List<Future<void>> resolutionTasks = [];
 
     for (var ilan in _tumIlanlar) {
       String sehirAdi = ilan.sehir;
       String ilanId = ilan.id;
 
-      //  Veri zaten "Şehir / İlçe" formatındaysa
+
       if (sehirAdi.contains('/')) {
         final parts = sehirAdi.split('/').map((s) => s.trim()).toList();
         if (parts.length == 2) {
           final city = parts[0];
           final district = parts[1];
           dropdownMap.putIfAbsent(city, () => {}).add(district);
-          idToLocationMap[ilanId] = "$city / $district"; // Filtre için kaydet
+          idToLocationMap[ilanId] = "$city / $district";
         }
       }
-      // 2. Veri POINT(...) formatındaysa, çözümle
+
       else if (sehirAdi.startsWith('POINT')) {
         final LatLng? koordinat = _koordinatCozumle(ilan.hamKonum);
 
@@ -400,7 +400,7 @@ class _IlanlarSayfasiState extends State<IlanlarSayfasi> {
                   if (city.isNotEmpty) {
                     if (district.isNotEmpty && district != city) {
                       dropdownMap.putIfAbsent(city, () => {}).add(district);
-                      idToLocationMap[ilanId] = "$city / $district"; // Çözülmüş hali kaydet
+                      idToLocationMap[ilanId] = "$city / $district";
                     } else {
                       dropdownMap.putIfAbsent(city, () => {});
                       idToLocationMap[ilanId] = city;
@@ -408,19 +408,19 @@ class _IlanlarSayfasiState extends State<IlanlarSayfasi> {
                   }
                 }
               }).catchError((_) {
-                // Hata durumunda hiçbir şey yapma
+
               })
           );
         }
       }
-      // Sadece şehir adı varsa
+
       else if (sehirAdi.isNotEmpty && sehirAdi != 'Konum Bilgisi Yok') {
         dropdownMap.putIfAbsent(sehirAdi, () => {});
         idToLocationMap[ilanId] = sehirAdi;
       }
     }
 
-    // Tüm asenkron işlemleri bekle
+
     await Future.wait(resolutionTasks);
 
     if(mounted) {
@@ -429,7 +429,7 @@ class _IlanlarSayfasiState extends State<IlanlarSayfasi> {
         _cozumlenmisKonumlar = idToLocationMap;
       });
 
-      // Veriler hazır, filtreyi tetikle ki liste güncellensin
+
       _filtrele();
     }
   }
@@ -451,26 +451,26 @@ class _IlanlarSayfasiState extends State<IlanlarSayfasi> {
     }
   }
 
-  // Filtreleme POINT verisine değil, çözülmüş veriye bakıyor
+
   void _filtrele() {
     List<Ilan> filtrelenmis = _tumIlanlar;
 
     debugPrint('--- FİLTRELEME BAŞLADI ---');
 
-    //  Hayvan Türü Filtresi
+
     if (_filtreler.hayvanTuru != null) {
       filtrelenmis = filtrelenmis.where((ilan) => ilan.hayvanTuru == _filtreler.hayvanTuru).toList();
     }
 
-    //  İlan Tipi Filtresi
+
     if (_filtreler.ilanTipi != null) {
       filtrelenmis = filtrelenmis.where((ilan) => ilan.ilanTipi == _filtreler.ilanTipi).toList();
     }
 
-    // Şehir Filtresi
+
     if (_selectedCity != null) {
       filtrelenmis = filtrelenmis.where((ilan) {
-        // İlanın çözülmüş konumunu al (Yoksa orijinalini kullan)
+
         final effectiveLocation = _cozumlenmisKonumlar[ilan.id] ?? ilan.sehir;
 
         final parts = effectiveLocation.split('/').map((s) => s.trim()).toList();
@@ -481,7 +481,7 @@ class _IlanlarSayfasiState extends State<IlanlarSayfasi> {
       }).toList();
     }
 
-    //  İlçe Filtresi
+
     if (_selectedDistrict != null) {
       filtrelenmis = filtrelenmis.where((ilan) {
         final effectiveLocation = _cozumlenmisKonumlar[ilan.id] ?? ilan.sehir;
@@ -503,8 +503,8 @@ class _IlanlarSayfasiState extends State<IlanlarSayfasi> {
   void _filtreleriTemizle() {
     setState(() {
       _filtreler = Filtreler();
-      _selectedCity = null;     // Şehir filtresini sıfırla
-      _selectedDistrict = null; // İlçe filtresini sıfırla
+      _selectedCity = null;
+      _selectedDistrict = null;
       _filtrelenmisIlanlar = _tumIlanlar;
     });
   }
@@ -675,14 +675,14 @@ class _IlanlarSayfasiState extends State<IlanlarSayfasi> {
             zeytinYesili: zeytinYesili,
             lacivert: lacivert,
             resolvedLocation: cozumlenmisKonum,
-            // --- MÜHENDİSLİK DOKUNUŞU: SİLİNME SİNYALİ YAKALANDI --- ✅
+
             onSilindi: () {
               setState(() {
                 _tumIlanlar.removeWhere((i) => i.id == ilan.id);
                 _filtrelenmisIlanlar.removeWhere((i) => i.id == ilan.id);
               });
             },
-            // Düzenlendiğinde listeyi tazelemesi için
+
             onDuzenlendi: () {
               _ilanlariYukle();
             },
@@ -699,8 +699,8 @@ class IlanListItem extends StatelessWidget {
   final Color zeytinYesili;
   final Color lacivert;
   final String? resolvedLocation;
-  final VoidCallback? onSilindi; // YENİ ✅
-  final VoidCallback? onDuzenlendi; // YENİ ✅
+  final VoidCallback? onSilindi;
+  final VoidCallback? onDuzenlendi;
 
   const IlanListItem({
     super.key,
@@ -742,16 +742,16 @@ class IlanListItem extends StatelessWidget {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: InkWell(
         onTap: () async {
-          // --- MÜHENDİSLİK DOKUNUŞU: DETAY SAYFASININ SONUCUNU BEKLİYORUZ --- ✅
+
           final sonuc = await Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => IlanDetaySayfasi(ilan: ilan)),
           );
 
           if (sonuc == 'silindi' && onSilindi != null) {
-            onSilindi!(); // İlan silindi sinyali geldiyse ana listeye haber ver (Anında kaldırır)
+            onSilindi!();
           } else if (sonuc == 'duzenlendi' && onDuzenlendi != null) {
-            onDuzenlendi!(); // İlan düzenlendi sinyali geldiyse listeyi arka planda yenile
+            onDuzenlendi!();
           }
         },
         borderRadius: BorderRadius.circular(16),
@@ -787,7 +787,7 @@ class IlanListItem extends StatelessWidget {
   }
 }
 
-// --- DETAY SAYFASI ---
+
 
 class IlanDetaySayfasi extends StatefulWidget {
   final Ilan ilan;
@@ -826,7 +826,7 @@ class _IlanDetaySayfasiState extends State<IlanDetaySayfasi> {
     }
   }
 
-  // --- İLAN SİLME ---
+
   Future<void> _ilanSil() async {
     final bool onay = await showDialog(
       context: context,
@@ -1102,9 +1102,9 @@ class _IlanDetaySayfasiState extends State<IlanDetaySayfasi> {
     String baslikMetni = _gosterilenIlan.ilanTipi == 'kayip' ? _gosterilenIlan.hayvanAdi : (_gosterilenIlan.ilanTipi == 'sahiplendirme' ? '${_gosterilenIlan.hayvanAdi} Yuva Arıyor' : 'Bulunan Hayvan');
 
     return Scaffold(
-      // --- BURAYI GÜNCELLE ---
+
       appBar: AppBar(
-        // iOS Tipi Geri Oku
+
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new),
           onPressed: () => Navigator.of(context).pop(),
@@ -1114,10 +1114,10 @@ class _IlanDetaySayfasiState extends State<IlanDetaySayfasi> {
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
-        backgroundColor: zeytinYesili, // Arka plan yeşil
-        foregroundColor: Colors.white, // İkon ve yazı beyaz
+        backgroundColor: zeytinYesili,
+        foregroundColor: Colors.white,
       ),
-      // -----------------------
+
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
@@ -1217,13 +1217,13 @@ class _IlanDetaySayfasiState extends State<IlanDetaySayfasi> {
                   ]),
                   const SizedBox(height: 20),
 
-                  // --- MÜHENDİSLİK DOKUNUŞU: YORUMLARI GÖR BUTONU --- ✅
+
                   SizedBox(
                     width: double.infinity,
                     height: 50,
                     child: ElevatedButton.icon(
                       onPressed: () {
-                        // Burada sayfanın en altına eklediğimiz IlanDetayYorumModal sınıfını çağırıyoruz
+
                         showModalBottomSheet(
                           context: context,
                           isScrollControlled: true,
@@ -1390,8 +1390,8 @@ class _IlanDetaySayfasiState extends State<IlanDetaySayfasi> {
   }
 }
 
-// --- MÜHENDİSLİK DOKUNUŞU: YORUM PENCERESİ (İLAN DETAYINA ÖZEL EKLENDİ) --- ✅
-// Bu sınıfı doğrudan _IlanDetaySayfasiState bloğunun BİTİMİNE (altına) yapıştır ki sayfa içinden çağrılabilsin.
+
+
 class IlanDetayYorumModal extends StatefulWidget {
   final String ilanId;
   final String ilanTipi;
@@ -1552,7 +1552,7 @@ class _IlanDetayYorumModalState extends State<IlanDetayYorumModal> {
     );
   }
 }
-//TAM EKRAN GALERİ
+
 class TamEkranGaleri extends StatefulWidget {
   final List<String> imageUrls;
   final int initialIndex;
@@ -1656,7 +1656,7 @@ class _TamEkranGaleriState extends State<TamEkranGaleri> {
   }
 }
 
-// KONUM WIDGET
+
 class KonumBilgisiWidget extends StatefulWidget {
   final dynamic hamKonumVerisi;
   final Color iconColor;
@@ -1724,7 +1724,7 @@ class _KonumBilgisiWidgetState extends State<KonumBilgisiWidget> {
   }
 }
 
-//  İLAN DÜZENLEME EKRANI (TAM KOD)
+
 class IlanDuzenleEkrani extends StatefulWidget {
   final Ilan ilan;
   const IlanDuzenleEkrani({super.key, required this.ilan});
@@ -2166,7 +2166,7 @@ class _IlanDuzenleEkraniState extends State<IlanDuzenleEkrani> {
           if (_guncelKoordinat != null)
             'konum': 'POINT(${_guncelKoordinat!.longitude} ${_guncelKoordinat!.latitude})',
         }).eq('id', ilanId);
-      } else { // Bulunan
+      } else {
         await supabase.rpc('bulunan_ilan_guncelle', params: params);
       }
 

@@ -1,30 +1,30 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // Panoya kopyalama için
+import 'package:flutter/services.dart'; 
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:timeago/timeago.dart' as timeago; // Zaman formatı için
+import 'package:timeago/timeago.dart' as timeago; 
 import 'shared_bottom_nav.dart';
 import 'kullanici_profili.dart';
 import 'profil.dart';
 import 'ilanlar.dart';
 import 'mesajlar.dart';
 
-// --- RENKLER (ORİJİNAL TEMA) ---
-const Color TEMA_YESIL = Color(0xFF558B2F); // Ana Yeşil
-const Color TEMA_SARI = Color(0xFFFFC300); // Vurgular
-const Color TEMA_LACIVERT = Color(0xFF1E3A8A); // Metinler
-const Color ARKA_PLAN_ACIK = Color(0xFFF1F8E9); // Açık Yeşil Arkaplan
+
+const Color TEMA_YESIL = Color(0xFF558B2F); 
+const Color TEMA_SARI = Color(0xFFFFC300); 
+const Color TEMA_LACIVERT = Color(0xFF1E3A8A); 
+const Color ARKA_PLAN_ACIK = Color(0xFFF1F8E9); 
 const Color ARKA_PLAN_BEYAZ = Colors.white;
 const Color KART_GOLGE = Color(0xFFD3DCE6);
-const Color KART_REPOST_M = Colors.blue; // Repost Mavi
-const Color KART_KAYIP_K = Colors.red; // Kayıp Kırmızı
-const Color KART_BULUNAN_Y = Color(0xFF4CAF50); // Bulunan Yeşil
+const Color KART_REPOST_M = Colors.blue; 
+const Color KART_KAYIP_K = Colors.red; 
+const Color KART_BULUNAN_Y = Color(0xFF4CAF50); 
 const Color KART_GRI = Color(0xFF78909C);
 
 final supabase = Supabase.instance.client;
 
 const String _PROFIL_FOTO_KOVA_ADI = 'profil_fotolari';
 
-// SORGULAR
+
 const String _KAYIP_ILAN_FIELDS = 'id, kullanici_id, hayvan_adi, hayvan_turu, hayvan_rengi, hayvan_cinsiyeti, cipi_var_mi, ekstra_bilgi, created_at, konum, konum_text';
 const String _BULUNAN_ILAN_FIELDS = 'id, kullanici_id, hayvan_turu, hayvan_rengi, hayvan_cinsiyeti, ekstra_bilgi, created_at, konum, konum_text';
 const String _SAHIPLENDIRME_ILAN_FIELDS = 'id, kullanici_id, hayvan_adi, hayvan_turu, hayvan_rengi, hayvan_cinsiyeti, cipi_var_mi, kisir_mi, kisirlastirma_sarti, aliskanliklar, ekstra_bilgi, created_at, konum, konum_text';
@@ -50,7 +50,7 @@ class Kullanici {
   }
 }
 
-// Profil fotoğrafı için güvenli URL alma fonksiyonu
+
 Future<String?> _profilFotoGuvenliUrlGetir(String? dosyaYolu) async {
   if (dosyaYolu == null || dosyaYolu.isEmpty) return null;
   try {
@@ -60,7 +60,7 @@ Future<String?> _profilFotoGuvenliUrlGetir(String? dosyaYolu) async {
   }
 }
 
-// İlan fotoğraflarını çekme fonksiyonu
+
 Future<Map<String, List<String>>> _ilanFotograflariniGetir(List<String> ilanIdleri, String ilanTipi) async {
   if (ilanIdleri.isEmpty) return {};
 
@@ -97,7 +97,7 @@ class _AkisSayfasiState extends State<AkisSayfasi> {
   List<Kullanici> _aramaSonuclari = [];
   Map<String, String?> _fotoUrlMap = {};
 
-  // bildirim sayısı
+  
   Stream<int> _okunmamisMesajSayisiGetir() {
     final myId = supabase.auth.currentUser?.id;
     if (myId == null) return Stream.value(0);
@@ -307,7 +307,7 @@ class _AkisSayfasiState extends State<AkisSayfasi> {
   }
 }
 
-// === AKIŞ İÇERİĞİ ===
+
 
 class _AkisIcerikWidget extends StatefulWidget {
   const _AkisIcerikWidget({super.key});
@@ -339,7 +339,7 @@ class _AkisIcerikWidgetState extends State<_AkisIcerikWidget> {
       if (user == null) return;
       setState(() => _isLoading = true);
 
-      // Takip Edilenler
+      
       final List<dynamic> takipEdilenler = await supabase.from('takipler').select('takip_edilen').eq('takip_eden', user.id);
       final List<String> takipEdilenIdList = takipEdilenler.map((e) => e['takip_edilen'] as String).toList();
 
@@ -348,13 +348,13 @@ class _AkisIcerikWidgetState extends State<_AkisIcerikWidget> {
         return;
       }
 
-      // İlanları Çek
+      
       final kayipIlanlar = await supabase.from('kayip_ilanlar').select(_KAYIP_ILAN_FIELDS).inFilter('kullanici_id', takipEdilenIdList);
       final bulunanIlanlar = await supabase.from('bulunan_ilanlar').select(_BULUNAN_ILAN_FIELDS).inFilter('kullanici_id', takipEdilenIdList);
       final sahiplendirmeIlanlar = await supabase.from('sahiplendirme_ilanlar').select(_SAHIPLENDIRME_ILAN_FIELDS).inFilter('kullanici_id', takipEdilenIdList);
       final repostlar = await supabase.from('repostlar').select('ilan_id, ilan_tipi, kullanici_id, created_at').inFilter('kullanici_id', takipEdilenIdList);
 
-      // Tüm İlan ID'lerini topla
+      
       final List<String> tumIlanIdleri = [];
       tumIlanIdleri.addAll(kayipIlanlar.map((e) => e['id'] as String));
       tumIlanIdleri.addAll(bulunanIlanlar.map((e) => e['id'] as String));
@@ -363,7 +363,7 @@ class _AkisIcerikWidgetState extends State<_AkisIcerikWidget> {
         if(!tumIlanIdleri.contains(r['ilan_id'])) tumIlanIdleri.add(r['ilan_id'] as String);
       }
 
-      // Profiller
+      
       final tumKullaniciIdleri = {...takipEdilenIdList, user.id};
       for(var i in kayipIlanlar) tumKullaniciIdleri.add(i['kullanici_id']);
       for(var i in bulunanIlanlar) tumKullaniciIdleri.add(i['kullanici_id']);
@@ -376,7 +376,7 @@ class _AkisIcerikWidgetState extends State<_AkisIcerikWidget> {
         _kullaniciProfilleri[m['id']] = m;
       }
 
-      // Fotoğraflar
+      
       final kayipIdList = kayipIlanlar.map((e) => e['id'] as String).toList();
       final bulunanIdList = bulunanIlanlar.map((e) => e['id'] as String).toList();
       final sahiplendirmeIdList = sahiplendirmeIlanlar.map((e) => e['id'] as String).toList();
@@ -390,28 +390,28 @@ class _AkisIcerikWidgetState extends State<_AkisIcerikWidget> {
       Set<String> cekilenRepostlarim = {};
 
       if (tumIlanIdleri.isNotEmpty) {
-        // Beğenilerim
+        
         final userBegeniler = await supabase.from('begeniler').select('ilan_id').eq('kullanici_id', user.id).inFilter('ilan_id', tumIlanIdleri);
         cekilenBegendiklerim = userBegeniler.map((e) => e['ilan_id'] as String).toSet();
 
-        // Repostlarım (Ben bu ilanı repost ettim mi?)
+        
         final userRepostlar = await supabase.from('repostlar').select('ilan_id').eq('kullanici_id', user.id).inFilter('ilan_id', tumIlanIdleri);
         cekilenRepostlarim = userRepostlar.map((e) => e['ilan_id'] as String).toSet();
       }
 
-      // Sayaçlar
+      
       final Map<String, int> begeniSayiMap = {};
       final Map<String, int> yorumSayiMap = {};
 
       if (tumIlanIdleri.isNotEmpty) {
-        // Beğeni Sayıları
+        
         final begeniDatasi = await supabase.from('begeniler').select('ilan_id').inFilter('ilan_id', tumIlanIdleri);
         for(var b in begeniDatasi) {
           final id = b['ilan_id'] as String;
           begeniSayiMap[id] = (begeniSayiMap[id] ?? 0) + 1;
         }
 
-        // Yorum Sayıları
+        
         final yorumDatasi = await supabase.from('yorumlar').select('ilan_id').inFilter('ilan_id', tumIlanIdleri);
         for(var y in yorumDatasi) {
           final id = y['ilan_id'] as String;
@@ -419,7 +419,7 @@ class _AkisIcerikWidgetState extends State<_AkisIcerikWidget> {
         }
       }
 
-      // 4. Veri Birleştirme
+      
       final Map<String, Map<String, dynamic>> tumIlanlarMap = {};
       void listeyiIsle(List list, String tip, Map fotos) {
         for(var i in list) {
@@ -432,7 +432,7 @@ class _AkisIcerikWidgetState extends State<_AkisIcerikWidget> {
       listeyiIsle(bulunanIlanlar, 'bulunan', bulunanFotolar);
       listeyiIsle(sahiplendirmeIlanlar, 'sahiplendirme', sahiplendirmeFotolar);
 
-      // Repost Eksiklerini Tamamlama
+      
       List<String> eksikKayip = [];
       List<String> eksikBulunan = [];
       List<String> eksikSahip = [];
@@ -461,7 +461,7 @@ class _AkisIcerikWidgetState extends State<_AkisIcerikWidget> {
         listeyiIsle(eksikler, 'sahiplendirme', fotos);
       }
 
-      // Akış Listesi
+      
       final List<Map<String, dynamic>> akis = [];
       tumIlanlarMap.forEach((k, v) {
         if (v['repost'] == false && takipEdilenIdList.contains(v['kullanici_id'])) akis.add(v);
@@ -526,7 +526,7 @@ class _AkisIcerikWidgetState extends State<_AkisIcerikWidget> {
         await supabase.from('begeniler').insert({'kullanici_id': user.id, 'ilan_id': ilanId, 'ilan_tipi': ilanTipi});
       }
     } catch (e) {
-      // Hata olursa geri al
+      
       setState(() {
         if (zatenBegendi) {
           _begendiklerim.add(ilanId);
@@ -540,7 +540,7 @@ class _AkisIcerikWidgetState extends State<_AkisIcerikWidget> {
     }
   }
 
-  //  REPOST (YENİDEN PAYLAŞMA) İŞLEMİ
+  
   Future<void> _repostIslemi(String ilanId, String ilanTipi) async {
     final user = supabase.auth.currentUser;
     if (user == null) return;
@@ -589,7 +589,7 @@ class _AkisIcerikWidgetState extends State<_AkisIcerikWidget> {
     }
   }
 
-  // --- MÜHENDİSLİK DOKUNUŞU: YORUM PENCERESİ GÜNCELLEMESİ --- ✅
+  
   void _yorumPenceresiniAc(BuildContext context, String ilanId, String ilanTipi) {
     showModalBottomSheet(
       context: context,
@@ -597,7 +597,7 @@ class _AkisIcerikWidgetState extends State<_AkisIcerikWidget> {
       backgroundColor: Colors.transparent,
       builder: (context) => _YorumlarModal(ilanId: ilanId, ilanTipi: ilanTipi),
     ).then((_) async {
-      // Pencere kapandığında TÜM SAYFAYI YENİLEME, SADECE bu ilanın yorum sayısını çek!
+      
       try {
         final countResponse = await supabase
             .from('yorumlar')
@@ -606,7 +606,7 @@ class _AkisIcerikWidgetState extends State<_AkisIcerikWidget> {
 
         if (mounted) {
           setState(() {
-            _yorumSayilari[ilanId] = countResponse.length; // Sadece o kartın sayısını günceller
+            _yorumSayilari[ilanId] = countResponse.length; 
           });
         }
       } catch (e) {
@@ -615,7 +615,7 @@ class _AkisIcerikWidgetState extends State<_AkisIcerikWidget> {
     });
   }
 
-  // PAYLAŞIM ÖZELLİĞİ
+  
   void _paylasIslemi(Map<String, dynamic> ilan) {
     final String tip = ilan['tip'];
     final StringBuffer buffer = StringBuffer();
@@ -769,7 +769,7 @@ class _AkisIcerikWidgetState extends State<_AkisIcerikWidget> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Repost Bilgisi
+                  
                   if(isRepost)
                     Padding(
                       padding: const EdgeInsets.all(8.0),
@@ -782,7 +782,7 @@ class _AkisIcerikWidgetState extends State<_AkisIcerikWidget> {
                       ),
                     ),
 
-                  // Profil Satırı
+                  
                   ListTile(
                     leading: GestureDetector(
                       onTap: () => _profilSayfasinaYonlendir(ilan['kullanici_id']),
@@ -800,7 +800,7 @@ class _AkisIcerikWidgetState extends State<_AkisIcerikWidget> {
                     trailing: const Icon(Icons.arrow_forward_ios, size: 14, color: KART_GRI),
                   ),
 
-                  // Fotoğraf
+                  
                   if (fotolar.isNotEmpty)
                     SizedBox(
                       height: 300,
@@ -811,7 +811,7 @@ class _AkisIcerikWidgetState extends State<_AkisIcerikWidget> {
                       ),
                     ),
 
-                  // İlan Açıklaması
+                  
                   Padding(
                     padding: const EdgeInsets.all(12.0),
                     child: Column(
@@ -824,7 +824,7 @@ class _AkisIcerikWidgetState extends State<_AkisIcerikWidget> {
                     ),
                   ),
 
-                  // Alt Butonlar
+                  
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
                     child: Row(
@@ -881,7 +881,7 @@ class _AkisIcerikWidgetState extends State<_AkisIcerikWidget> {
   }
 }
 
-//  YORUM PENCERESİ
+
 class _YorumlarModal extends StatefulWidget {
   final String ilanId;
   final String ilanTipi;

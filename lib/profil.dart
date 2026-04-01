@@ -6,7 +6,7 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geocoding/geocoding.dart';
-import 'package:image_cropper/image_cropper.dart'; // KIRPMA PAKETİ
+import 'package:image_cropper/image_cropper.dart'; 
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 
@@ -20,7 +20,7 @@ final supabase = Supabase.instance.client;
 
 const String _PROFIL_FOTO_KOVA_ADI = 'profil_fotolari';
 
-// --- SORGULAR ---
+
 const String _KAYIP_ILAN_FIELDS = 'id, hayvan_adi, hayvan_turu, hayvan_rengi, hayvan_cinsiyeti, cipi_var_mi, ekstra_bilgi, created_at, konum, konum_text';
 const String _BULUNAN_ILAN_FIELDS = 'id, hayvan_turu, hayvan_rengi, hayvan_cinsiyeti, ekstra_bilgi, created_at, konum, konum_text';
 const String _SAHIPLENDIRME_ILAN_FIELDS = 'id, hayvan_adi, hayvan_turu, hayvan_rengi, hayvan_cinsiyeti, cipi_var_mi, kisir_mi, kisirlastirma_sarti, aliskanliklar, ekstra_bilgi, created_at, konum, konum_text';
@@ -233,7 +233,7 @@ class _ProfilState extends State<Profil> with SingleTickerProviderStateMixin {
       final user = _supabase.auth.currentUser;
       if (user == null) return;
 
-      //  KAYIP İLANLARI YÜKLE
+      
       final List<dynamic> kayip = await _supabase
           .from('kayip_ilanlar')
           .select(_KAYIP_ILAN_FIELDS)
@@ -258,7 +258,7 @@ class _ProfilState extends State<Profil> with SingleTickerProviderStateMixin {
         };
       }).toList();
 
-      //  BULUNAN İLANLARI YÜKLE
+      
       final List<dynamic> bulunan = await _supabase
           .from('bulunan_ilanlar')
           .select(_BULUNAN_ILAN_FIELDS)
@@ -285,7 +285,7 @@ class _ProfilState extends State<Profil> with SingleTickerProviderStateMixin {
         };
       }).toList();
 
-      // SAHİPLENDİRME İLANLARINI YÜKLE
+      
       final List<dynamic> sahiplendirme = await _supabase
           .from('sahiplendirme_ilanlar')
           .select(_SAHIPLENDIRME_ILAN_FIELDS)
@@ -317,8 +317,8 @@ class _ProfilState extends State<Profil> with SingleTickerProviderStateMixin {
         _bulunanIlanlarim = normalizedBulunan;
         _sahiplendirmeIlanlarim = normalizedSahiplendirme;
 
-        // --- MÜHENDİSLİK DOKUNUŞU 1: if (!refresh) engeli kaldırıldı! --- ✅
-        // Artık her sildiğimizde liste mutlaka güncellenecek.
+        
+        
         if (_ilanFilterIndex == 0) {
           _ilanlarim = _kayipIlanlarim;
         } else if (_ilanFilterIndex == 1) {
@@ -456,9 +456,9 @@ class _ProfilState extends State<Profil> with SingleTickerProviderStateMixin {
     }
   }
 
-  // --- MÜHENDİSLİK DOKUNUŞU 2: ANINDA SİLİNME (OPTIMISTIC UI) --- ✅
+  
   Future<void> _sadeceRepostSil(String ilanId, String ilanTipi) async {
-    // İnterneti bile beklemeden ekrandan şak diye uçurur
+    
     setState(() {
       _ilanlarim.removeWhere((i) => i['id'] == ilanId);
       _repostIlanlarim.removeWhere((i) => i['id'] == ilanId);
@@ -480,7 +480,7 @@ class _ProfilState extends State<Profil> with SingleTickerProviderStateMixin {
         );
       }
     } catch (e) {
-      _loadIlanlarim(refresh: true); // Eğer hata verirse ilanı geri getirir
+      _loadIlanlarim(refresh: true); 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Repost kaldırılamadı: $e'), backgroundColor: Colors.red),
@@ -489,9 +489,9 @@ class _ProfilState extends State<Profil> with SingleTickerProviderStateMixin {
     }
   }
 
-  // --- MÜHENDİSLİK DOKUNUŞU 3: ANINDA SİLİNME (OPTIMISTIC UI) --- ✅
+  
   Future<void> _ilanVeIliskiliVerileriSil(String ilanId, String ilanTipi) async {
-    // Silme tuşuna basıldığı an, loading spinner bile göstermeden ekrandan uçar!
+    
     setState(() {
       _ilanlarim.removeWhere((i) => i['id'] == ilanId);
       _kayipIlanlarim.removeWhere((i) => i['id'] == ilanId);
@@ -554,7 +554,7 @@ class _ProfilState extends State<Profil> with SingleTickerProviderStateMixin {
       }
 
     } catch (e) {
-      _loadIlanlarim(refresh: true); // Eğer Supabase hatası olursa listeyi geri yükle
+      _loadIlanlarim(refresh: true); 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('İlan silinirken hata oluştu: $e'), backgroundColor: Colors.red),
@@ -978,7 +978,7 @@ class _ProfilState extends State<Profil> with SingleTickerProviderStateMixin {
     }
   }
 
-  // --- MÜHENDİSLİK DOKUNUŞU 4: YÖNLENDİRME METODU SİNYAL DÖNDÜRÜYOR --- ✅
+  
   Future<String?> _ilanDetayinaYonlendir(Map<String, dynamic> ilanData) async {
     final String ilanId = ilanData['id'] as String;
     final String ilanTipi = ilanData['tip'] as String;
@@ -1132,7 +1132,7 @@ class _ProfilState extends State<Profil> with SingleTickerProviderStateMixin {
       )
           : Column(
         children: [
-          // Profil Header
+          
           Stack(
             children: [
               Container(
@@ -1253,7 +1253,7 @@ class _ProfilState extends State<Profil> with SingleTickerProviderStateMixin {
           ),
 
 
-          // Tab Bar
+          
           Container(
             color: beyaz,
             child: TabBar(
@@ -1269,12 +1269,12 @@ class _ProfilState extends State<Profil> with SingleTickerProviderStateMixin {
             ),
           ),
 
-          // Tab Bar Content
+          
           Expanded(
             child: TabBarView(
               controller: _tabController,
               children: [
-                // BİLGİLERİM
+                
                 SingleChildScrollView(
                   padding: const EdgeInsets.all(16),
                   child: Column(
@@ -1436,7 +1436,7 @@ class _ProfilState extends State<Profil> with SingleTickerProviderStateMixin {
                   ),
                 ),
 
-                // ilanlarım kısmı
+                
                 Column(
                   children: [
                     const SizedBox(height: 8),
@@ -1605,7 +1605,7 @@ class _ProfilState extends State<Profil> with SingleTickerProviderStateMixin {
                                   icon: Icon(Icons.more_vert, color: gri),
                                 ),
 
-                                // --- MÜHENDİSLİK DOKUNUŞU 5: İLAN SİLİNDİ / DÜZENLENDİ SİNYALİNİ YAKALAMA --- ✅
+                                
                                 onTap: () async {
                                   final sonuc = await _ilanDetayinaYonlendir(ilan);
 
@@ -2018,7 +2018,7 @@ class _InfoField extends StatelessWidget {
   }
 }
 
-// İLAN DÜZENLEME FORMU
+
 class _IlanDuzenleForm extends StatefulWidget {
   final Map<String, dynamic> ilanData;
   final VoidCallback onIlanGuncellendi;
@@ -2758,7 +2758,7 @@ class _IlanDuzenleFormState extends State<_IlanDuzenleForm> {
             itemCount: _mevcutFotograflar.length + _eklenecekYeniFotograflar.length + 1,
             itemBuilder: (context, index) {
 
-              //  FOTO EKLE BUTONU
+              
               if (index == _mevcutFotograflar.length + _eklenecekYeniFotograflar.length) {
                 return GestureDetector(
                   onTap: _fotoCekVeyaSec,
@@ -2783,7 +2783,7 @@ class _IlanDuzenleFormState extends State<_IlanDuzenleForm> {
                 );
               }
 
-              // MEVCUT (SUNUCUDAKİ) FOTOĞRAFLAR
+              
               if (index < _mevcutFotograflar.length) {
                 final url = _mevcutFotograflar[index];
                 return Stack(
@@ -2810,7 +2810,7 @@ class _IlanDuzenleFormState extends State<_IlanDuzenleForm> {
                         ),
                       ),
                     ),
-                    // Düzenle İkonu
+                    
                     Positioned(
                       bottom: 4, right: 12,
                       child: Container(
@@ -2823,7 +2823,7 @@ class _IlanDuzenleFormState extends State<_IlanDuzenleForm> {
                 );
               }
 
-              // YENİ EKLENEN (YEREL) FOTOĞRAFLAR
+              
               final yeniIndex = index - _mevcutFotograflar.length;
               final XFile file = _eklenecekYeniFotograflar[yeniIndex];
               return Stack(
@@ -2860,7 +2860,7 @@ class _IlanDuzenleFormState extends State<_IlanDuzenleForm> {
 
   @override
   Widget build(BuildContext context) {
-    // Başlık belirleme
+    
     String baslik = 'İlanı Düzenle';
     if (_isKayip) baslik = 'Kayıp İlanı Düzenle';
     else if (_isSahiplendirme) baslik = 'Sahiplendirme İlanı Düzenle';

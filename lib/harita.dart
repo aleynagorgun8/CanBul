@@ -1,14 +1,14 @@
-import 'dart:convert'; // JSON işlemleri için
-import 'dart:typed_data'; // Hex veriyi çözmek için gerekli
+import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart'; // Google Maps
-import 'package:geolocator/geolocator.dart'; // GPS işlemleri
-import 'package:http/http.dart' as http; // İstekler
-import 'package:supabase_flutter/supabase_flutter.dart'; // Supabase
-import 'package:geocoding/geocoding.dart'; // Adres çözümleme
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:http/http.dart' as http;
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:geocoding/geocoding.dart';
 
 import 'shared_bottom_nav.dart';
-import 'ilanlar.dart'; // İlan Detay Sayfası ve Model
+import 'ilanlar.dart';
 
 final supabase = Supabase.instance.client;
 
@@ -50,7 +50,7 @@ class _HaritaSayfasiState extends State<HaritaSayfasi> {
   GoogleMapController? _haritaKontrolcusu;
   LatLng? _kullaniciKonumu;
 
-  // -- Listeler --
+
   List<Mekan> _mekanlar = [];
   List<HaritaIlani> _dbIlanlar = [];
 
@@ -61,20 +61,20 @@ class _HaritaSayfasiState extends State<HaritaSayfasi> {
   bool _haritaHareketEtti = false;
   LatLng? _haritaMerkezi;
 
-  // --- FİLTRE DEĞİŞKENLERİ ---
 
-  // 1. Grup: MEKANLAR (Google Places) - Varsayılan KAPALI
+
+
   bool _veterinerGoster = false;
   bool _petshopGoster = false;
 
-  // 2. Grup: İLANLAR (Veritabanı) - Varsayılan AÇIK
+
   bool _kayipGoster = true;
   bool _bulunanGoster = true;
   bool _sahiplendirmeGoster = true;
 
-  // Panel Kontrolcüleri
-  bool _mekanPaneliAcik = false; // Sol panel
-  bool _ilanPaneliAcik = false;  // Sağ (Pati) paneli
+
+  bool _mekanPaneliAcik = false;
+  bool _ilanPaneliAcik = false;
 
   final String _apiKey = "AIzaSyCB9_pncVw-woxlEuy9s4WAkyRsCfthkgY";
 
@@ -105,7 +105,7 @@ class _HaritaSayfasiState extends State<HaritaSayfasi> {
     }
   }
 
-  // Hex/WKB Çözücü
+
   LatLng? _koordinatCozumle(dynamic data) {
     if (data == null) return null;
     String hexString = data.toString();
@@ -146,7 +146,7 @@ class _HaritaSayfasiState extends State<HaritaSayfasi> {
     return null;
   }
 
-  // İlanları Çek
+
   Future<void> _veritabaniIlanlariniGetir() async {
     List<HaritaIlani> geciciListe = [];
 
@@ -186,7 +186,7 @@ class _HaritaSayfasiState extends State<HaritaSayfasi> {
     }
   }
 
-  // Google Places Verisi
+
   Future<void> _googlePlacesVerisiGetir(double lat, double lng, int yaricap) async {
     if (!_veterinerGoster && !_petshopGoster) {
       setState(() {
@@ -375,7 +375,7 @@ class _HaritaSayfasiState extends State<HaritaSayfasi> {
         children: [
           GoogleMap(
             mapType: MapType.normal,
-            // mapToolbarEnabled: true, bu olmamasına rağmen default olarak true kabul ediyor
+
             initialCameraPosition: CameraPosition(target: _kullaniciKonumu!, zoom: 12.0),
             onMapCreated: (c) => _haritaKontrolcusu = c,
             onCameraMove: (p) {
@@ -399,7 +399,7 @@ class _HaritaSayfasiState extends State<HaritaSayfasi> {
                 child: ElevatedButton.icon(
                   onPressed: () {
                     if (_haritaMerkezi != null) {
-                      _googlePlacesVerisiGetir(_haritaMerkezi!.latitude, _haritaMerkezi!.longitude, 50000); // 50km
+                      _googlePlacesVerisiGetir(_haritaMerkezi!.latitude, _haritaMerkezi!.longitude, 50000);
                     }
                   },
                   icon: _veriYukleniyor
@@ -411,14 +411,14 @@ class _HaritaSayfasiState extends State<HaritaSayfasi> {
               ),
             ),
 
-          // SOL PANEL: MEKANLAR
+
           Positioned(
             left: 10,
             top: 80,
             child: _buildSolPanel(),
           ),
 
-          //  SAĞ PANEL: İLANLAR
+
           Positioned(
             right: 10,
             top: 80,
@@ -438,7 +438,7 @@ class _HaritaSayfasiState extends State<HaritaSayfasi> {
     );
   }
 
-  // --- SOL PANEL WIDGET (MEKANLAR) ---
+
   Widget _buildSolPanel() {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
@@ -466,7 +466,7 @@ class _HaritaSayfasiState extends State<HaritaSayfasi> {
                   child: Container(
                     height: 50,
                     width: _mekanPaneliAcik ? 280 : 50,
-                    // Kapalıyken ikon ortada
+
                     alignment: _mekanPaneliAcik ? Alignment.centerLeft : Alignment.center,
                     padding: _mekanPaneliAcik ? const EdgeInsets.symmetric(horizontal: 12) : EdgeInsets.zero,
                     child: _mekanPaneliAcik
@@ -537,7 +537,7 @@ class _HaritaSayfasiState extends State<HaritaSayfasi> {
     );
   }
 
-  // --- SAĞ PANEL WIDGET (İLANLAR) ---
+
   Widget _buildSagPanel() {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
@@ -564,7 +564,7 @@ class _HaritaSayfasiState extends State<HaritaSayfasi> {
                   child: Container(
                     height: 50,
                     width: _ilanPaneliAcik ? 280 : 50,
-                    // Kapalıyken ikon ortada
+
                     alignment: _ilanPaneliAcik ? Alignment.centerRight : Alignment.center,
                     padding: _ilanPaneliAcik ? const EdgeInsets.symmetric(horizontal: 12) : EdgeInsets.zero,
                     child: _ilanPaneliAcik

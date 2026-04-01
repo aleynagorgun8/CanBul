@@ -5,7 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geocoding/geocoding.dart';
 
-// Proje dosyaları
+
 import 'ilanlar.dart';
 import 'shared_bottom_nav.dart';
 import 'profil.dart';
@@ -15,12 +15,12 @@ final supabase = Supabase.instance.client;
 
 const String _PROFIL_FOTO_KOVA_ADI = 'profil_fotolari';
 
-// --- SORGULAR ---
+
 const String _KAYIP_ILAN_FIELDS = 'id, hayvan_adi, hayvan_turu, hayvan_rengi, hayvan_cinsiyeti, cipi_var_mi, ekstra_bilgi, created_at, konum, konum_text';
 const String _BULUNAN_ILAN_FIELDS = 'id, hayvan_turu, hayvan_rengi, hayvan_cinsiyeti, ekstra_bilgi, created_at, konum, konum_text';
 const String _SAHIPLENDIRME_ILAN_FIELDS = 'id, hayvan_adi, hayvan_turu, hayvan_rengi, hayvan_cinsiyeti, cipi_var_mi, kisir_mi, kisirlastirma_sarti, aliskanliklar, ekstra_bilgi, created_at, konum, konum_text';
 
-// Profil fotoğrafı için güvenli URL alma
+
 Future<String?> _profilFotoGuvenliUrlGetir(String? dosyaYolu) async {
   if (dosyaYolu == null || dosyaYolu.isEmpty) return null;
 
@@ -35,7 +35,7 @@ Future<String?> _profilFotoGuvenliUrlGetir(String? dosyaYolu) async {
   }
 }
 
-// Fotoğraf URL'lerini çek
+
 Future<Map<String, String?>> _ilanFotograflariniGetir(List<String> ilanIdleri, String ilanTipi) async {
   if (ilanIdleri.isEmpty) return {};
 
@@ -53,7 +53,7 @@ Future<Map<String, String?>> _ilanFotograflariniGetir(List<String> ilanIdleri, S
   return ilanIdToFoto;
 }
 
-// POINT(x y) verisini LatLng nesnesine çevirir
+
 LatLng? _koordinatCozumle(String? data) {
   if (data == null) return null;
   final RegExp regex = RegExp(r'POINT\((.*) (.*)\)');
@@ -73,9 +73,9 @@ LatLng? _koordinatCozumle(String? data) {
 }
 
 
-// Kullanıcı Profil Sayfası
+
 class KullaniciProfili extends StatefulWidget {
-  final String kullaniciId; // Görüntülenen profilin ID'si
+  final String kullaniciId; 
 
   const KullaniciProfili({super.key, required this.kullaniciId});
 
@@ -93,13 +93,13 @@ class _KullaniciProfiliState extends State<KullaniciProfili> with SingleTickerPr
   bool _takipEdiliyorMi = false;
   late TabController _tabController;
 
-  // Takip Sayıları
+  
   int _takipciSayisi = 0;
   int _takipEdilenSayisi = 0;
 
   List<Map<String, dynamic>> _ilanlar = [];
 
-  // İlan Listeleri
+  
   List<Map<String, dynamic>> _kayipIlanlar = [];
   List<Map<String, dynamic>> _bulunanIlanlar = [];
   List<Map<String, dynamic>> _sahiplendirmeIlanlar = [];
@@ -115,7 +115,7 @@ class _KullaniciProfiliState extends State<KullaniciProfili> with SingleTickerPr
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _loadProfile();
-    _loadTakipSayilari(); // Takip sayılarını yükle
+    _loadTakipSayilari(); 
     _checkTakipDurumu();
   }
 
@@ -212,10 +212,10 @@ class _KullaniciProfiliState extends State<KullaniciProfili> with SingleTickerPr
     }
   }
 
-  // --- İLAN YÜKLEME FONKSİYONLARI ---
+  
   Future<void> _loadIlanlar() async {
     try {
-      //  Kayıp
+      
       final List<dynamic> kayip = await _supabase
           .from('kayip_ilanlar')
           .select(_KAYIP_ILAN_FIELDS)
@@ -239,7 +239,7 @@ class _KullaniciProfiliState extends State<KullaniciProfili> with SingleTickerPr
         };
       }).toList();
 
-      //  Bulunan
+      
       final List<dynamic> bulunan = await _supabase
           .from('bulunan_ilanlar')
           .select(_BULUNAN_ILAN_FIELDS)
@@ -265,7 +265,7 @@ class _KullaniciProfiliState extends State<KullaniciProfili> with SingleTickerPr
         };
       }).toList();
 
-      // Sahiplendirme
+      
       final List<dynamic> sahiplendirme = await _supabase
           .from('sahiplendirme_ilanlar')
           .select(_SAHIPLENDIRME_ILAN_FIELDS)
@@ -440,7 +440,7 @@ class _KullaniciProfiliState extends State<KullaniciProfili> with SingleTickerPr
     }
   }
 
-// MESAJ GÖNDERME
+
   void _sohbetBaslatVeGit() {
     final currentUser = _supabase.auth.currentUser;
 
@@ -684,7 +684,7 @@ class _KullaniciProfiliState extends State<KullaniciProfili> with SingleTickerPr
           ? const Center(child: Text('Profil bulunamadı'))
           : Column(
         children: [
-          // Profil Header
+          
           Stack(
             children: [
               Container(
@@ -750,10 +750,10 @@ class _KullaniciProfiliState extends State<KullaniciProfili> with SingleTickerPr
                     ),
                     const SizedBox(height: 16),
 
-                    // --- BUTONLAR ---
+                    
                     Row(
                       children: [
-                        // TAKİP ET BUTONU
+                        
                         Expanded(
                           child: SizedBox(
                             height: 45,
@@ -779,7 +779,7 @@ class _KullaniciProfiliState extends State<KullaniciProfili> with SingleTickerPr
                           ),
                         ),
                         const SizedBox(width: 12),
-                        // MESAJ GÖNDER BUTONU
+                        
                         Expanded(
                           child: SizedBox(
                             height: 45,
@@ -812,7 +812,7 @@ class _KullaniciProfiliState extends State<KullaniciProfili> with SingleTickerPr
             ],
           ),
 
-          // Tab Bar
+          
           Container(
             color: beyaz,
             child: TabBar(
@@ -828,12 +828,12 @@ class _KullaniciProfiliState extends State<KullaniciProfili> with SingleTickerPr
             ),
           ),
 
-          // Tab Bar Content
+          
           Expanded(
             child: TabBarView(
               controller: _tabController,
               children: [
-                // BİLGİLER
+                
                 SingleChildScrollView(
                   padding: const EdgeInsets.all(16),
                   child: Container(
@@ -869,7 +869,7 @@ class _KullaniciProfiliState extends State<KullaniciProfili> with SingleTickerPr
                   ),
                 ),
 
-                // İLANLAR
+                
                 Column(
                   children: [
                     const SizedBox(height: 8),
@@ -980,7 +980,7 @@ class _KullaniciProfiliState extends State<KullaniciProfili> with SingleTickerPr
   }
 }
 
-// YARDIMCI WIDGET'LAR
+
 class _FollowStats extends StatelessWidget {
   final int takipciSayisi;
   final int takipEdilenSayisi;

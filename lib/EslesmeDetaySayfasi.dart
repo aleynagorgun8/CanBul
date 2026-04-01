@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-// Proje içi importlar
+
 import 'ilanlar.dart';
 
-// --- RENK SABİTLERİ ---
+
 const Color zeytinYesili = Color(0xFF558B2F);
 const Color lacivert = Color(0xFF002D72);
 const Color sariPastel = Color(0xFFFFB74D);
@@ -21,10 +21,10 @@ class EslesmeDetaySayfasi extends StatefulWidget {
 }
 
 class _EslesmeDetaySayfasiState extends State<EslesmeDetaySayfasi> {
-  // Gizlenen ilanların ID'lerini telefonun hafızasında tutacağımız liste
+  
   Set<String> _gizlenenIlanlar = {};
 
-  // Üstteki göz ikonunun durumu (Gizlileri göster/gösterme)
+  
   bool _gizlileriGoster = false;
 
   bool _hafizaYukleniyor = true;
@@ -35,12 +35,12 @@ class _EslesmeDetaySayfasiState extends State<EslesmeDetaySayfasi> {
     _hafizadanGizlenenleriGetir();
   }
 
-  // Telefonun yerel hafızasından (Local Storage) gizlenmiş ilanları okuyan fonksiyon
+  
   Future<void> _hafizadanGizlenenleriGetir() async {
     final tercihKaydi = await SharedPreferences.getInstance();
     final kullaniciId = Supabase.instance.client.auth.currentUser?.id ?? 'anonim';
 
-    // Her kullanıcıya özel bir hafıza anahtarı ile veriyi çekiyoruz
+    
     final List<String> kayitliListe = tercihKaydi.getStringList('gizli_ilanlar_$kullaniciId') ?? [];
 
     setState(() {
@@ -49,7 +49,7 @@ class _EslesmeDetaySayfasiState extends State<EslesmeDetaySayfasi> {
     });
   }
 
-  // Gizle/Göster butonuna basıldığında hem ekranı hem hafızayı güncelleyen fonksiyon
+  
   Future<void> _gizleDurumunuDegistir(String bulunanIlanId, bool suAnGizliMi) async {
     final tercihKaydi = await SharedPreferences.getInstance();
     final kullaniciId = Supabase.instance.client.auth.currentUser?.id ?? 'anonim';
@@ -62,23 +62,23 @@ class _EslesmeDetaySayfasiState extends State<EslesmeDetaySayfasi> {
       }
     });
 
-    // Güncel listeyi telefonun hafızasına kalıcı olarak kaydet
+    
     await tercihKaydi.setStringList('gizli_ilanlar_$kullaniciId', _gizlenenIlanlar.toList());
   }
 
   @override
   Widget build(BuildContext context) {
-    // 1. Gelen ham veriyi listeye alıyoruz
+    
     final List<Map<String, dynamic>> tumEslesmeler = List<Map<String, dynamic>>.from(widget.grupVerisi['eslesmeler']);
 
-    // 2. SIRALAMA: En yüksek skor (benzerlik) en üstte olsun
+    
     tumEslesmeler.sort((a, b) {
       double skorA = double.tryParse(a['eslesme_skoru'].toString()) ?? 0.0;
       double skorB = double.tryParse(b['eslesme_skoru'].toString()) ?? 0.0;
       return skorB.compareTo(skorA);
     });
 
-    // 3. FİLTRELEME: Gizleme mantığını uyguluyoruz
+    
     final List<Map<String, dynamic>> gosterilecekEslesmeler = tumEslesmeler.where((eslesme) {
       final String ilanId = eslesme['bulunan_ilan_id'].toString();
       final bool gizliMi = _gizlenenIlanlar.contains(ilanId);
@@ -97,7 +97,7 @@ class _EslesmeDetaySayfasiState extends State<EslesmeDetaySayfasi> {
           "Tüm Eşleşmeler",
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
-        // Tasarım isteğine göre Zeytin Yeşili ve Oval Köşeler eklendi
+        
         backgroundColor: zeytinYesili,
         foregroundColor: Colors.white,
         centerTitle: true,
@@ -127,7 +127,7 @@ class _EslesmeDetaySayfasiState extends State<EslesmeDetaySayfasi> {
           : gosterilecekEslesmeler.isEmpty
           ? const Center(child: Text("Gösterilecek eşleşme bulunmuyor."))
           : ListView.builder(
-        // AppBar oval olduğu için içeriği biraz aşağıdan başlatıyoruz
+        
         padding: const EdgeInsets.only(top: 20, bottom: 10),
         itemCount: gosterilecekEslesmeler.length,
         itemBuilder: (context, index) {
@@ -148,7 +148,7 @@ class _EslesmeDetaySayfasiState extends State<EslesmeDetaySayfasi> {
   }
 }
 
-// --- EŞLEŞME KARTI WIDGET'I ---
+
 class _EslesmeKarti extends StatefulWidget {
   final Map<String, dynamic> eslesmeVerisi;
   final int sira;

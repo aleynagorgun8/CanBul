@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'EslesmeDetaySayfasi.dart';
 
-// Proje içi importlar
+
 import 'ilanlar.dart';
 import 'kullanici_profili.dart';
 import 'profil.dart';
 
-// --- RENK SABİTLERİ ---
+
 const Color zeytinYesili = Color(0xFF558B2F);
 const Color lacivert = Color(0xFF002D72);
 const Color sariPastel = Color(0xFFFFB74D);
@@ -71,7 +71,7 @@ class BildirimModel {
 }
 
 class BildirimlerSayfasi extends StatelessWidget {
-  final int varsayilanTab; // Analizden sonra 1 gönderilir ✅
+  final int varsayilanTab; 
 
   const BildirimlerSayfasi({super.key, this.varsayilanTab = 0});
 
@@ -88,32 +88,32 @@ class BildirimlerSayfasi extends StatelessWidget {
 
     return DefaultTabController(
       length: 2,
-      initialIndex: varsayilanTab, // Hangi sekmenin açık geleceğini belirler ✅
+      initialIndex: varsayilanTab, 
       child: Scaffold(
         backgroundColor: arkaPlan,
         appBar: AppBar(
-          // --- iOS TARZI GERİ OKU EKLEDİĞİMİZ KISIM ---
+          
           leading: IconButton(
             icon: const Icon(Icons.arrow_back_ios_new),
             onPressed: () => Navigator.of(context).pop(),
           ),
-          // --------------------------------------------
+          
           title: const Text("Bildirimler"),
           centerTitle: true,
           backgroundColor: zeytinYesili,
           foregroundColor: Colors.white,
-          bottom: TabBar( // DİKKAT: const kelimesini sildik çünkü içi dinamik ✅
+          bottom: TabBar( 
             indicatorColor: sariPastel,
             labelColor: Colors.white,
             unselectedLabelColor: Colors.white70,
             tabs: [
               Tab(
                 text: "Sosyal",
-                icon: _buildSosyalBadgeIcon(user.id), // Dinamik rozetli ikon
+                icon: _buildSosyalBadgeIcon(user.id), 
               ),
               Tab(
                 text: "İlan Eşleşmeleri",
-                icon: _buildEslesmeBadgeIcon(user.id), // Dinamik rozetli ikon
+                icon: _buildEslesmeBadgeIcon(user.id), 
               ),
             ],
           ),
@@ -127,9 +127,9 @@ class BildirimlerSayfasi extends StatelessWidget {
       ),
     );  }
 
-  // --- MÜHENDİSLİK DOKUNUŞU: TAB İKONLARI İÇİN BAĞIMSIZ STREAM'LER ---
+  
 
-  // Sosyal Tab'ı için dinleyici
+  
   Widget _buildSosyalBadgeIcon(String userId) {
     return StreamBuilder<List<Map<String, dynamic>>>(
       stream: Supabase.instance.client
@@ -146,7 +146,7 @@ class BildirimlerSayfasi extends StatelessWidget {
     );
   }
 
-  // Eşleşmeler Tab'ı için dinleyici (Akıllı Sayım Filtresi ile)
+  
   Widget _buildEslesmeBadgeIcon(String userId) {
     return StreamBuilder<List<Map<String, dynamic>>>(
       stream: Supabase.instance.client
@@ -174,7 +174,7 @@ class BildirimlerSayfasi extends StatelessWidget {
     );
   }
 
-  // Ortak Rozet (Badge) Tasarımı
+  
   Widget _rozetliIkon(IconData ikon, int bildirimSayisi) {
     return Stack(
       clipBehavior: Clip.none,
@@ -182,7 +182,7 @@ class BildirimlerSayfasi extends StatelessWidget {
         Icon(ikon),
         if (bildirimSayisi > 0)
           Positioned(
-            right: -8, // İkonun tam köşesine oturması için
+            right: -8, 
             top: -4,
             child: Container(
               padding: const EdgeInsets.all(4),
@@ -249,7 +249,7 @@ class _SosyalBildirimlerTab extends StatelessWidget {
   }
 }
 
-// --- 2. SEKME: İLAN EŞLEŞMELERİ (STATEFUL WIDGET OLARAK GÜNCELLENDİ) ---
+
 class _IlanEslesmeleriTab extends StatefulWidget {
   final User user;
   const _IlanEslesmeleriTab({required this.user});
@@ -268,8 +268,8 @@ class _IlanEslesmeleriTabState extends State<_IlanEslesmeleriTab> {
           .order('eslesme_tarihi', ascending: false)
           .asyncMap((eslesmeler) async {
 
-        // 1. ADIM: Sadece GİRİŞ YAPAN KULLANICININ kayıp ilanlarını çekiyoruz
-        // Stateful Widget içinde parametrelere 'widget.user' şeklinde erişilir ✅
+        
+        
         final benimKayipIlanlarim = await Supabase.instance.client
             .from('kayip_ilanlar')
             .select('id, hayvan_adi')
@@ -282,7 +282,7 @@ class _IlanEslesmeleriTabState extends State<_IlanEslesmeleriTab> {
 
         Map<String, Map<String, dynamic>> gruplar = {};
 
-        // 2. ADIM: Eşleşmeleri kayıp ilan bazlı grupluyoruz
+        
         for (var eslesme in eslesmeler) {
           String kID = eslesme['kayip_ilan_id'].toString();
           if (kayipMap.containsKey(kID)) {
@@ -326,7 +326,7 @@ class _IlanEslesmeleriTabState extends State<_IlanEslesmeleriTab> {
             final List eslesmelerListesi = grup['eslesmeler'] as List;
             final int adaySayisi = eslesmelerListesi.length;
 
-            // --- MÜHENDİSLİK MANTIĞI: Bu grupta hiç okunmamış eşleşme var mı? ---
+            
             final bool okunmadiMi = eslesmelerListesi.any((e) => e['kontrol_edildi'] == false);
 
             return Card(
@@ -365,10 +365,10 @@ class _IlanEslesmeleriTabState extends State<_IlanEslesmeleriTab> {
                   ],
                 ),
                 onTap: () async {
-                  // 1. ADIM: ID'leri topla
+                  
                   final List<dynamic> idler = eslesmelerListesi.map((e) => e['id']).toList();
 
-                  // 2. ADIM: Arka planda DB güncellemesi başlasın (await YOK, kullanıcıyı bekletmiyoruz!) ✅
+                  
                   Supabase.instance.client
                       .from('eslesmeler')
                       .update({'kontrol_edildi': true})
@@ -376,13 +376,13 @@ class _IlanEslesmeleriTabState extends State<_IlanEslesmeleriTab> {
                       .then((_) => debugPrint("✅ DB Güncellendi"))
                       .catchError((e) => debugPrint("🚨 DB Hatası: $e"));
 
-                  // 3. ADIM: Detay sayfasına ANINDA git ve kullanıcının GERİ DÖNMESİNİ BEKLE (await var) ✅
+                  
                   await Navigator.push(
                     context,
                     MaterialPageRoute(builder: (context) => EslesmeDetaySayfasi(grupVerisi: grup)),
                   );
 
-                  // 4. ADIM: Kullanıcı geri döndüğünde ekranı ZORLA YENİLE (Sarı nokta anında silinir) ✅
+                  
                   if (mounted) {
                     setState(() {});
                   }

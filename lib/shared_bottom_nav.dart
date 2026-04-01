@@ -7,8 +7,8 @@ import 'ana_ekran.dart';
 import 'ilanlar.dart';
 import 'profil.dart';
 
-// MÜHENDİSLİK DOKUNUŞU: Sınıfı StatelessWidget yaptık.
-// Artık ana ekran her yenilendiğinde, navbar da anında taze veriyi çekecek! ✅
+
+
 class SharedBottomNavBar extends StatelessWidget {
   final int currentIndex;
   final Color turuncuPastel;
@@ -51,10 +51,10 @@ class SharedBottomNavBar extends StatelessWidget {
     final myId = Supabase.instance.client.auth.currentUser?.id;
 
     if (myId == null) {
-      return _buildBottomNav(context, 0, 0); // Giriş yapılmadıysa sıfır gönder
+      return _buildBottomNav(context, 0, 0); 
     }
 
-    // 1. MESAJLAR AKIŞI
+    
     return StreamBuilder<List<Map<String, dynamic>>>(
       stream: Supabase.instance.client
           .from('mesajlar')
@@ -62,7 +62,7 @@ class SharedBottomNavBar extends StatelessWidget {
           .eq('alici_id', myId),
       builder: (context, mesajSnapshot) {
 
-        // 2. SOSYAL BİLDİRİMLER AKIŞI
+        
         return StreamBuilder<List<Map<String, dynamic>>>(
           stream: Supabase.instance.client
               .from('bildirimler')
@@ -70,7 +70,7 @@ class SharedBottomNavBar extends StatelessWidget {
               .eq('kullanici_id', myId),
           builder: (context, sosyalSnapshot) {
 
-            // 3. EŞLEŞMELER AKIŞI (Ana ekrandaki mantığın birebir aynısı) ✅
+            
             return StreamBuilder<List<Map<String, dynamic>>>(
               stream: Supabase.instance.client
                   .from('eslesmeler')
@@ -86,7 +86,7 @@ class SharedBottomNavBar extends StatelessWidget {
               }),
               builder: (context, eslesmeSnapshot) {
 
-                // --- SAYIM İŞLEMLERİ ---
+                
                 int mesajSayisi = 0;
                 if (mesajSnapshot.hasData) {
                   mesajSayisi = mesajSnapshot.data!.where((m) => m['okundu'] == false).length;
@@ -103,7 +103,7 @@ class SharedBottomNavBar extends StatelessWidget {
                   eslesmeSayisi = benzersizBasliklar.length;
                 }
 
-                // Ana Ekranda Görünecek Toplam Sayı (Sosyal + Eşleşme)
+                
                 int anaEkranToplamBildirim = bildirimSayisi + eslesmeSayisi;
 
                 return _buildBottomNav(context, mesajSayisi, anaEkranToplamBildirim);
@@ -115,7 +115,7 @@ class SharedBottomNavBar extends StatelessWidget {
     );
   }
 
-  // --- ARAYÜZ OLUŞTURUCU (Tasarım kısmı) ---
+  
   Widget _buildBottomNav(BuildContext context, int mesajSayisi, int anaEkranToplamBildirim) {
     return Container(
       decoration: BoxDecoration(
@@ -146,7 +146,7 @@ class SharedBottomNavBar extends StatelessWidget {
             icon: _buildIconWithBadge(
                 icon: Icons.home,
                 count: anaEkranToplamBildirim,
-                badgeColor: const Color(0xFFFFB74D) // Sarı pastel rengimiz
+                badgeColor: const Color(0xFFFFB74D) 
             ),
             label: 'Ana Sayfa',
           ),
@@ -157,7 +157,7 @@ class SharedBottomNavBar extends StatelessWidget {
     );
   }
 
-  // Rozet (Badge) Tasarımı
+  
   Widget _buildIconWithBadge({required IconData icon, required int count, required Color badgeColor}) {
     if (count <= 0) return Icon(icon);
     return Stack(

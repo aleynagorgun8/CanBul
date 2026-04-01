@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
 
-// Proje içi importlar
+
 import 'shared_bottom_nav.dart';
 import 'kullanici_profili.dart';
 
 final supabase = Supabase.instance.client;
 
-// Renk Tanımları
+
 const Color zeytinYesili = Color(0xFF558B2F);
 const Color turuncuPastel = Color(0xFFFFB74D);
 const Color arkaPlan = Color(0xFFF1F8E9);
@@ -38,7 +38,7 @@ class _MesajlarSayfasiState extends State<MesajlarSayfasi> {
     super.initState();
   }
 
-  // ARAMA
+
   Future<void> _anlikKullaniciAra(String aramaMetni) async {
     final text = aramaMetni.trim();
     if (text.isEmpty) {
@@ -95,7 +95,7 @@ class _MesajlarSayfasiState extends State<MesajlarSayfasi> {
         backgroundColor: zeytinYesili,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: beyaz), // ios oku
+          icon: const Icon(Icons.arrow_back_ios_new, color: beyaz),
           onPressed: () => Navigator.pop(context),
         ),      ),
       body: Column(
@@ -291,7 +291,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> {
   final ScrollController _scrollController = ScrollController();
   String? _guncelFotoUrl;
 
-  // Silinen mesajın yerine yazılacak metin
+
   final String _silinmisMesajMetni = '🚫 Bu mesaj silindi';
 
   @override
@@ -299,7 +299,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> {
     super.initState();
     if (widget.baslangicMesaji != null) _mesajController.text = widget.baslangicMesaji!;
     _profiliYukle();
-    _okunduIsaretle(); // Sayfa açılır açılmaz okundu yap
+    _okunduIsaretle();
   }
 
   Future<void> _profiliYukle() async {
@@ -314,12 +314,12 @@ class _SohbetEkraniState extends State<SohbetEkrani> {
 
   Future<void> _okunduIsaretle() async {
     try {
-      // Sadece bana gelen ve okunmamış olanları güncelle
+
       await supabase
           .from('mesajlar')
           .update({'okundu': true})
-          .eq('gonderen_id', widget.aliciId) // Gönderen karşı taraf
-          .eq('alici_id', _benimId) // Alıcı benim
+          .eq('gonderen_id', widget.aliciId)
+          .eq('alici_id', _benimId)
           .eq('okundu', false);
     } catch (e) {
       print('Okundu hatası: $e');
@@ -343,14 +343,14 @@ class _SohbetEkraniState extends State<SohbetEkrani> {
     }
   }
 
-  // MESAJ SİLME
 
-  //  Veritabanında güncelleme işlemi
+
+
   Future<void> _mesajSil(String mesajId) async {
     try {
       await supabase
           .from('mesajlar')
-          .update({'mesaj': _silinmisMesajMetni}) // Mesaj içeriğini değiştiriyoruz
+          .update({'mesaj': _silinmisMesajMetni})
           .eq('id', mesajId);
 
       if (mounted) {
@@ -367,7 +367,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> {
     }
   }
 
-  //  Onay Penceresi
+
   void _silmeOnayiGoster(String mesajId) {
     showDialog(
       context: context,
@@ -382,8 +382,8 @@ class _SohbetEkraniState extends State<SohbetEkrani> {
           ),
           TextButton(
             onPressed: () {
-              Navigator.pop(ctx); // Dialogu kapat
-              _mesajSil(mesajId); // Silme işlemini başlat
+              Navigator.pop(ctx);
+              _mesajSil(mesajId);
             },
             child: const Text('Herkesten Sil', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
           ),
@@ -414,7 +414,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> {
         elevation: 1,
         titleSpacing: 0,
     leading: IconButton(
-    icon: const Icon(Icons.arrow_back_ios_new, color: beyaz), // ios oku
+    icon: const Icon(Icons.arrow_back_ios_new, color: beyaz),
     onPressed: () => Navigator.pop(context),
     ),
         title: InkWell(
@@ -468,7 +468,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> {
 
                 final mesajlar = snapshot.data!;
 
-                // GÖRÜLDÜ MEKANİZMASI
+
                 final bool okunmamisVarMi =
                 mesajlar.any((m) => m['gonderen_id'] == widget.aliciId && m['okundu'] == false);
 
@@ -498,20 +498,20 @@ class _SohbetEkraniState extends State<SohbetEkrani> {
                     final saat = DateFormat.Hm().format(tarih);
                     final bool okundu = mesajVerisi['okundu'] ?? false;
 
-                    // Mesaj silinmiş mi kontrolü
+
                     final bool silinmisMesaj = mesajIcerik == _silinmisMesajMetni;
 
                     return Align(
                       alignment: benAttim ? Alignment.centerRight : Alignment.centerLeft,
                       child: GestureDetector(
-                        // Sadece kendi attığımız ve henüz silinmemiş mesajlara uzun basınca işlem yap
+
                         onLongPress: (benAttim && !silinmisMesaj) ? () => _silmeOnayiGoster(mesajId) : null,
                         child: Container(
                           margin: const EdgeInsets.only(bottom: 8),
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                           constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
                           decoration: BoxDecoration(
-                            // Silinmiş mesajlar için gri arka plan, normaller için turuncu/beyaz
+
                             color: silinmisMesaj ? Colors.grey.shade300 : (benAttim ? turuncuPastel : beyaz),
                             borderRadius: BorderRadius.only(
                               topLeft: const Radius.circular(16),
@@ -527,7 +527,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
-                              // Mesaj İçeriği
+
                               if (silinmisMesaj)
                                 Row(
                                   mainAxisSize: MainAxisSize.min,
@@ -546,7 +546,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> {
 
                               const SizedBox(height: 4),
 
-                              // Saat ve Okundu Bilgisi
+
                               Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [

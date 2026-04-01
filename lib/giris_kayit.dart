@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'ana_ekran.dart'; // Başarılı giriş sonrası yönleneceğimiz sayfa
+import 'ana_ekran.dart';
 
 class GirisKayitSayfasi extends StatefulWidget {
   const GirisKayitSayfasi({super.key});
@@ -14,17 +14,17 @@ class _GirisKayitSayfasiState extends State<GirisKayitSayfasi> {
   @override
   void initState() {
     super.initState();
-    // Uygulama açıldığında veya linke tıklandığında burası çalışır
+
     _supabase.auth.onAuthStateChange.listen((data) {
       final session = data.session;
 
-      // Eğer oturum varsa (yani kullanıcı mail linkine tıklayıp geldiyse)
+
       if (session != null && mounted) {
 
-        // Kullanıcı adını meta veriden çekelim
+
         String kAdi = session.user.userMetadata?['tam_ad'] ?? 'Kullanıcı';
 
-        // Direkt Ana Ekrana yönlendir
+
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (context) => AnaEkran(kullaniciAdi: kAdi)),
         );
@@ -35,7 +35,7 @@ class _GirisKayitSayfasiState extends State<GirisKayitSayfasi> {
       }
     });
   }
-  bool showSignUp = false;  // Giriş mi kayıt mı olduğunu belirlemek için bool değişken
+  bool showSignUp = false;
 
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _adController = TextEditingController();
@@ -50,9 +50,10 @@ class _GirisKayitSayfasiState extends State<GirisKayitSayfasi> {
   final Color beyaz = Colors.white;
   final Color gri = const Color(0xFF9E9E9E);
 
-  final SupabaseClient _supabase = Supabase.instance.client;  // Supabase bağlantısı
+  final SupabaseClient _supabase = Supabase.instance.client;
 
-  // Kayıt olma işlemi
+
+
   Future<void> _kayitOl() async {
     final ad = _adController.text.trim();
     final email = _emailController.text.trim();
@@ -83,8 +84,8 @@ class _GirisKayitSayfasiState extends State<GirisKayitSayfasi> {
     }
 
     try {
-      // Supabase ile kayıt işlemi (E-posta doğrulama linki gönderilir)
-      // Ad ve Telefon meta veri olarak gönderilir.
+
+
       final response = await _supabase.auth.signUp(
         email: email,
         password: sifre,
@@ -95,7 +96,7 @@ class _GirisKayitSayfasiState extends State<GirisKayitSayfasi> {
         emailRedirectTo: 'canbulMailDogrulama://login-callback/',
       );
 
-      // Kayıt başarılı olduysa yani mail gönderildiyse
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text("Kayıt işleminizi tamamlamak için lütfen ${email} adresinize gönderilen doğrulama linkine tıklayın. Linke tıkladıktan sonra uygulamaya geri dönerek giriş yapabilirsiniz."),
@@ -107,8 +108,8 @@ class _GirisKayitSayfasiState extends State<GirisKayitSayfasi> {
 
       if (mounted) {
         setState(() {
-          showSignUp = false; // Giriş sekmesine geç
-          _emailController.text = email; // E-postayı hazır doldur
+          showSignUp = false;
+          _emailController.text = email;
           _sifreController.clear();
           _sifreTekrarController.clear();
         });
@@ -134,7 +135,7 @@ class _GirisKayitSayfasiState extends State<GirisKayitSayfasi> {
   }
 
 
-  // Giriş yapma işlemi
+
   Future<void> _girisYap() async {
     final email = _emailController.text.trim();
     final sifre = _sifreController.text.trim();
@@ -160,15 +161,15 @@ class _GirisKayitSayfasiState extends State<GirisKayitSayfasi> {
         final user = response.user!;
         String ad = "Kullanıcı";
 
-        //e posta doğrulaması zorunlu. Doğrulama olmadan giriş de olmaz
+
         if (user.emailConfirmedAt == null) {
-          // Eğer Supabase maili doğrulamamışsa, oturumu hemen kapat (güvenlik)
+
           await _supabase.auth.signOut();
 
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: const Text("Giriş Başarısız: E-posta adresiniz doğrulanmadı. Lütfen mail kutunuzu kontrol edin ve linke tıklayın."),
-              backgroundColor: Colors.red, // Kırmızı hata rengi
+              backgroundColor: Colors.red,
               duration: const Duration(seconds: 5),
               behavior: SnackBarBehavior.floating,
             ),
@@ -176,9 +177,9 @@ class _GirisKayitSayfasiState extends State<GirisKayitSayfasi> {
           return;
         }
 
-        //mail doğrulama tamamsa normal akış devam
 
-        //Profilin varlığını kontrol et
+
+
         var userData = await _supabase
             .from('profiles')
             .select('tam_ad')
@@ -186,7 +187,7 @@ class _GirisKayitSayfasiState extends State<GirisKayitSayfasi> {
             .maybeSingle();
 
         if (userData == null) {
-          // Profil yoksa yani ilk başarılı girişimizse, meta verilerden çekip profili oluştur.
+
           final metadata = user.userMetadata;
 
           final profilVerisi = {
@@ -199,7 +200,7 @@ class _GirisKayitSayfasiState extends State<GirisKayitSayfasi> {
           await _supabase.from('profiles').insert(profilVerisi);
           ad = metadata?['tam_ad'] ?? "Kullanıcı";
         } else {
-          // Profil varsa, mevcut adı kullan
+
           ad = userData['tam_ad'] ?? "Kullanıcı";
         }
 
@@ -215,13 +216,13 @@ class _GirisKayitSayfasiState extends State<GirisKayitSayfasi> {
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
-              builder: (context) => AnaEkran(kullaniciAdi: ad), // AnaEkran'a yönlendir
+              builder: (context) => AnaEkran(kullaniciAdi: ad),
             ),
           );
         }
       }
     } on AuthException catch (e) {
-      // Supabase'in normalde fırlattığı hatalar (şifre yanlış, kullanıcı yok vb.)
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text("Giriş hatası: ${e.message}"),
@@ -251,7 +252,7 @@ class _GirisKayitSayfasiState extends State<GirisKayitSayfasi> {
             children: [
               const SizedBox(height: 10),
 
-              // Logo
+
               CircleAvatar(
                 radius: 30,
                 backgroundColor: turuncuPastel,
@@ -263,7 +264,7 @@ class _GirisKayitSayfasiState extends State<GirisKayitSayfasi> {
               ),
               const SizedBox(height: 15),
 
-              // Başlık
+
               Text(
                 showSignUp ? 'Hesap Oluştur' : 'Hoş Geldiniz',
                 style: TextStyle(
@@ -286,7 +287,7 @@ class _GirisKayitSayfasiState extends State<GirisKayitSayfasi> {
 
               const SizedBox(height: 20),
 
-              // Seçim Kartları
+
               Container(
                 decoration: BoxDecoration(
                   color: beyaz,
@@ -301,7 +302,7 @@ class _GirisKayitSayfasiState extends State<GirisKayitSayfasi> {
                 ),
                 child: Row(
                   children: [
-                    // Hesap Oluştur
+
                     Expanded(
                       child: InkWell(
                         onTap: () {
@@ -340,7 +341,7 @@ class _GirisKayitSayfasiState extends State<GirisKayitSayfasi> {
                       ),
                     ),
 
-                    // Giriş Yap
+
                     Expanded(
                       child: InkWell(
                         onTap: () {
@@ -384,7 +385,7 @@ class _GirisKayitSayfasiState extends State<GirisKayitSayfasi> {
 
               const SizedBox(height: 20),
 
-              // Form Alanı
+
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
@@ -410,7 +411,7 @@ class _GirisKayitSayfasiState extends State<GirisKayitSayfasi> {
                         ),
                       if (showSignUp) const SizedBox(height: 12),
 
-                      // Telefon Numarası Alanı
+
                       if (showSignUp)
                         _buildTextField(
                           controller: _telefonController,
@@ -447,7 +448,7 @@ class _GirisKayitSayfasiState extends State<GirisKayitSayfasi> {
 
                       const SizedBox(height: 20),
 
-                      // Giriş/Kayıt Butonu
+
                       SizedBox(
                         width: double.infinity,
                         height: 50,
@@ -473,7 +474,7 @@ class _GirisKayitSayfasiState extends State<GirisKayitSayfasi> {
 
                       const SizedBox(height: 12),
 
-                      // Sayfa Değiştirme Butonu
+
                       TextButton(
                         onPressed: () {
                           setState(() {
@@ -528,7 +529,7 @@ class _GirisKayitSayfasiState extends State<GirisKayitSayfasi> {
     );
   }
 
-  // Ortak TextField Widget
+
   Widget _buildTextField({
     required TextEditingController controller,
     required String label,
