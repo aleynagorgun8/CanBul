@@ -104,9 +104,6 @@ LatLng? _koordinatCozumle(String? data) {
   return null;
 }
 
-
-
-
 class Profil extends StatefulWidget {
   const Profil({super.key});
 
@@ -313,7 +310,6 @@ class _ProfilState extends State<Profil> with SingleTickerProviderStateMixin {
         };
       }).toList();
 
-
       await _loadRepostIlanlarim(user.id);
 
       setState(() {
@@ -321,16 +317,16 @@ class _ProfilState extends State<Profil> with SingleTickerProviderStateMixin {
         _bulunanIlanlarim = normalizedBulunan;
         _sahiplendirmeIlanlarim = normalizedSahiplendirme;
 
-        if (!refresh) {
-          if (_ilanFilterIndex == 0) {
-            _ilanlarim = _kayipIlanlarim;
-          } else if (_ilanFilterIndex == 1) {
-            _ilanlarim = _bulunanIlanlarim;
-          } else if (_ilanFilterIndex == 2) {
-            _ilanlarim = _sahiplendirmeIlanlarim;
-          } else {
-            _ilanlarim = _repostIlanlarim;
-          }
+        // --- MÜHENDİSLİK DOKUNUŞU 1: if (!refresh) engeli kaldırıldı! --- ✅
+        // Artık her sildiğimizde liste mutlaka güncellenecek.
+        if (_ilanFilterIndex == 0) {
+          _ilanlarim = _kayipIlanlarim;
+        } else if (_ilanFilterIndex == 1) {
+          _ilanlarim = _bulunanIlanlarim;
+        } else if (_ilanFilterIndex == 2) {
+          _ilanlarim = _sahiplendirmeIlanlarim;
+        } else {
+          _ilanlarim = _repostIlanlarim;
         }
       });
     } catch (e) {
@@ -460,8 +456,14 @@ class _ProfilState extends State<Profil> with SingleTickerProviderStateMixin {
     }
   }
 
+  // --- MÜHENDİSLİK DOKUNUŞU 2: ANINDA SİLİNME (OPTIMISTIC UI) --- ✅
   Future<void> _sadeceRepostSil(String ilanId, String ilanTipi) async {
-    setState(() { _isLoading = true; });
+    // İnterneti bile beklemeden ekrandan şak diye uçurur
+    setState(() {
+      _ilanlarim.removeWhere((i) => i['id'] == ilanId);
+      _repostIlanlarim.removeWhere((i) => i['id'] == ilanId);
+    });
+
     try {
       await _supabase
           .from('repostlar')
@@ -477,26 +479,26 @@ class _ProfilState extends State<Profil> with SingleTickerProviderStateMixin {
           ),
         );
       }
-      await _loadIlanlarim(refresh: true);
-
     } catch (e) {
+      _loadIlanlarim(refresh: true); // Eğer hata verirse ilanı geri getirir
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Repost kaldırılamadı: $e'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('Repost kaldırılamadı: $e'), backgroundColor: Colors.red),
         );
-      }
-    } finally {
-      if (mounted) {
-        setState(() { _isLoading = false; });
       }
     }
   }
 
+  // --- MÜHENDİSLİK DOKUNUŞU 3: ANINDA SİLİNME (OPTIMISTIC UI) --- ✅
   Future<void> _ilanVeIliskiliVerileriSil(String ilanId, String ilanTipi) async {
-    setState(() { _isLoading = true; });
+    // Silme tuşuna basıldığı an, loading spinner bile göstermeden ekrandan uçar!
+    setState(() {
+      _ilanlarim.removeWhere((i) => i['id'] == ilanId);
+      _kayipIlanlarim.removeWhere((i) => i['id'] == ilanId);
+      _bulunanIlanlarim.removeWhere((i) => i['id'] == ilanId);
+      _sahiplendirmeIlanlarim.removeWhere((i) => i['id'] == ilanId);
+    });
+
     try {
       String tabloAdi = '';
       if (ilanTipi == 'kayip') tabloAdi = 'kayip_ilanlar';
@@ -545,25 +547,18 @@ class _ProfilState extends State<Profil> with SingleTickerProviderStateMixin {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('$ilanTipi ilanı ve tüm ilişkili veriler başarıyla silindi.'),
+            content: Text('$ilanTipi ilanı başarıyla silindi.'),
             backgroundColor: const Color(0xFF558B2F),
           ),
         );
       }
-      await _loadIlanlarim(refresh: true);
 
     } catch (e) {
+      _loadIlanlarim(refresh: true); // Eğer Supabase hatası olursa listeyi geri yükle
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('İlan silinirken kritik hata oluştu: $e'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('İlan silinirken hata oluştu: $e'), backgroundColor: Colors.red),
         );
-      }
-    } finally {
-      if (mounted) {
-        setState(() { _isLoading = false; });
       }
     }
   }
@@ -729,17 +724,15 @@ class _ProfilState extends State<Profil> with SingleTickerProviderStateMixin {
     CroppedFile? kirpilmisDosya = await ImageCropper().cropImage(
       sourcePath: resimDosyasi.path,
       cropStyle: CropStyle.circle,
-
-      // Profil fotoları genelde 1:1 karedir, bunu zorunlu kılıyoruz
       aspectRatio: const CropAspectRatio(ratioX: 1, ratioY: 1),
       uiSettings: [
         AndroidUiSettings(
           toolbarTitle: 'Profil Fotoğrafını Ayarla',
-          toolbarColor: const Color(0xFF558B2F), // zeytinYesili
+          toolbarColor: const Color(0xFF558B2F),
           toolbarWidgetColor: Colors.white,
           initAspectRatio: CropAspectRatioPreset.square,
-          lockAspectRatio: true, // Kullanıcı oranı bozamasın
-          activeControlsWidgetColor: const Color(0xFFFFB74D), // turuncuPastel
+          lockAspectRatio: true,
+          activeControlsWidgetColor: const Color(0xFFFFB74D),
         ),
         IOSUiSettings(
           title: 'Profil Fotoğrafını Ayarla',
@@ -753,7 +746,6 @@ class _ProfilState extends State<Profil> with SingleTickerProviderStateMixin {
     return null;
   }
 
-  // Profil Fotoğrafı Seçme ve Yükleme Fonksiyonu
   Future<void> _pickAndUploadPhoto() async {
     if (_profile == null) return;
     try {
@@ -813,11 +805,10 @@ class _ProfilState extends State<Profil> with SingleTickerProviderStateMixin {
       final picked = await _picker.pickImage(source: source, imageQuality: 80);
       if (picked == null) return;
 
-      // KIRPMA
       final File? kirpilmisFoto = await _profilResmiYuvarlakKirp(File(picked.path));
-      if (kirpilmisFoto == null) return; // Kullanıcı iptal ettiyse çık
+      if (kirpilmisFoto == null) return;
       final Uint8List fileBytes = await kirpilmisFoto.readAsBytes();
-      final String ext = picked.name.split('.').last; // Uzantıyı al
+      final String ext = picked.name.split('.').last;
 
       final String dosyaYolu = '${user.id}/${DateTime.now().millisecondsSinceEpoch}.$ext';
 
@@ -832,7 +823,7 @@ class _ProfilState extends State<Profil> with SingleTickerProviderStateMixin {
         fileBytes,
         fileOptions: const FileOptions(
           upsert: true,
-          contentType: 'image/jpeg', // Genelde jpeg çıktısı olur
+          contentType: 'image/jpeg',
         ),
       );
 
@@ -944,7 +935,6 @@ class _ProfilState extends State<Profil> with SingleTickerProviderStateMixin {
     );
   }
 
-
   Future<void> _logout() async {
     try {
       await _supabase.auth.signOut();
@@ -988,7 +978,8 @@ class _ProfilState extends State<Profil> with SingleTickerProviderStateMixin {
     }
   }
 
-  Future<void> _ilanDetayinaYonlendir(Map<String, dynamic> ilanData) async {
+  // --- MÜHENDİSLİK DOKUNUŞU 4: YÖNLENDİRME METODU SİNYAL DÖNDÜRÜYOR --- ✅
+  Future<String?> _ilanDetayinaYonlendir(Map<String, dynamic> ilanData) async {
     final String ilanId = ilanData['id'] as String;
     final String ilanTipi = ilanData['tip'] as String;
 
@@ -1016,13 +1007,10 @@ class _ProfilState extends State<Profil> with SingleTickerProviderStateMixin {
       if (ilanDetay == null || ilanDetay is! Map<String, dynamic>) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('İlan detayı bulunamadı veya hatalı veri geldi.'),
-              backgroundColor: Colors.red,
-            ),
+            const SnackBar(content: Text('İlan detayı bulunamadı.'), backgroundColor: Colors.red),
           );
         }
-        return;
+        return null;
       }
 
       final List<dynamic> fotos = await _supabase
@@ -1043,10 +1031,7 @@ class _ProfilState extends State<Profil> with SingleTickerProviderStateMixin {
         final LatLng? koordinat = _koordinatCozumle(detayData['konum']);
         if (koordinat != null) {
           try {
-            List<Placemark> placemarks = await placemarkFromCoordinates(
-                koordinat.latitude,
-                koordinat.longitude
-            );
+            List<Placemark> placemarks = await placemarkFromCoordinates(koordinat.latitude, koordinat.longitude);
             if (placemarks.isNotEmpty) {
               Placemark place = placemarks[0];
               adresGosterimi = "${place.administrativeArea ?? '?'} / ${place.subAdministrativeArea ?? '?'}";
@@ -1055,13 +1040,11 @@ class _ProfilState extends State<Profil> with SingleTickerProviderStateMixin {
             }
           } catch (e) {
             adresGosterimi = "Konum Hatası (Lütfen Haritada Gör)";
-            print("Adres çözümleme hatası: $e");
           }
         }
       }
 
       detayData['konum'] = adresGosterimi;
-
       final profileData = detayData['profiles'] as Map<String, dynamic>?;
 
       final Ilan ilanNesnesi = Ilan.fromMap(
@@ -1074,29 +1057,20 @@ class _ProfilState extends State<Profil> with SingleTickerProviderStateMixin {
       );
 
       if (mounted) {
-        Navigator.push(
+        final sonuc = await Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (context) => IlanDetaySayfasi(ilan: ilanNesnesi),
-          ),
-        ).then((_) {
-          _loadIlanlarim(refresh: true);
-        });
+          MaterialPageRoute(builder: (context) => IlanDetaySayfasi(ilan: ilanNesnesi)),
+        );
+        return sonuc as String?;
       }
 
     } catch (e) {
-      print('İlan detayına yönlendirme hatası: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('İlan detayları yüklenirken hata oluştu: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Yükleme hatası: $e'), backgroundColor: Colors.red));
       }
     }
+    return null;
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -1631,8 +1605,21 @@ class _ProfilState extends State<Profil> with SingleTickerProviderStateMixin {
                                   icon: Icon(Icons.more_vert, color: gri),
                                 ),
 
-                                onTap: () {
-                                  _ilanDetayinaYonlendir(ilan);
+                                // --- MÜHENDİSLİK DOKUNUŞU 5: İLAN SİLİNDİ / DÜZENLENDİ SİNYALİNİ YAKALAMA --- ✅
+                                onTap: () async {
+                                  final sonuc = await _ilanDetayinaYonlendir(ilan);
+
+                                  if (sonuc == 'silindi') {
+                                    setState(() {
+                                      _kayipIlanlarim.removeWhere((i) => i['id'] == ilan['id']);
+                                      _bulunanIlanlarim.removeWhere((i) => i['id'] == ilan['id']);
+                                      _sahiplendirmeIlanlarim.removeWhere((i) => i['id'] == ilan['id']);
+                                      _repostIlanlarim.removeWhere((i) => i['id'] == ilan['id']);
+                                      _ilanlarim.removeWhere((i) => i['id'] == ilan['id']);
+                                    });
+                                  } else if (sonuc == 'duzenlendi') {
+                                    _loadIlanlarim(refresh: true);
+                                  }
                                 },
                               ),
                             );
@@ -2050,7 +2037,6 @@ class _IlanDuzenleFormState extends State<_IlanDuzenleForm> {
   final SupabaseClient _supabase = supabase;
 
   bool _yukleniyor = false;
-  // Fotoğraf işlenirken gösterge için
   bool _fotografIsleniyor = false;
 
   final ImagePicker _picker = ImagePicker();
@@ -2184,7 +2170,6 @@ class _IlanDuzenleFormState extends State<_IlanDuzenleForm> {
       final response = await http.get(Uri.parse(url));
       if (response.statusCode == 200) {
         final directory = await getTemporaryDirectory();
-        // Geçici bir dosya adı oluştur
         final filePath = '${directory.path}/${DateTime.now().millisecondsSinceEpoch}_temp.jpg';
         final file = File(filePath);
         await file.writeAsBytes(response.bodyBytes);
@@ -2196,7 +2181,6 @@ class _IlanDuzenleFormState extends State<_IlanDuzenleForm> {
     return null;
   }
 
-  // KIRPMA FONKSİYONU
   Future<XFile?> _resmiKirp(XFile dosya) async {
     CroppedFile? croppedFile = await ImageCropper().cropImage(
       sourcePath: dosya.path,
@@ -2228,22 +2212,17 @@ class _IlanDuzenleFormState extends State<_IlanDuzenleForm> {
     return null;
   }
 
-  //
   Future<void> _mevcutFotografiKirp(String url, int index) async {
     setState(() => _fotografIsleniyor = true);
 
-    // URL'den geçici dosyaya indir
     File? tempFile = await _downloadFile(url);
 
     if (tempFile != null && mounted) {
-      // Kırpma ekranını aç
       XFile? croppedFile = await _resmiKirp(XFile(tempFile.path));
 
       if (croppedFile != null && mounted) {
-        // Eski URL'yi sil (Veritabanından da siler)
         await _mevcutFotografiSil(url, index);
 
-        //  Yeni kırpılmış dosyayı "yeni eklenecekler" listesine al
         setState(() {
           _eklenecekYeniFotograflar.add(croppedFile);
         });
@@ -2407,7 +2386,6 @@ class _IlanDuzenleFormState extends State<_IlanDuzenleForm> {
     if (source == ImageSource.gallery) {
       final List<XFile>? fotolar = await _picker.pickMultiImage(imageQuality: 85);
       if (fotolar != null) {
-        // ÇOKLU SEÇİM İÇİN KIRPMA DÖNGÜSÜ
         for (var foto in fotolar) {
           XFile? kirpilmisFoto = await _resmiKirp(foto);
           if (kirpilmisFoto != null) {
@@ -2418,7 +2396,6 @@ class _IlanDuzenleFormState extends State<_IlanDuzenleForm> {
     } else {
       final XFile? foto = await _picker.pickImage(source: source, imageQuality: 85);
       if (foto != null) {
-        // TEKLİ SEÇİM İÇİN KIRPMA
         XFile? kirpilmisFoto = await _resmiKirp(foto);
         if (kirpilmisFoto != null) {
           setState(() => _eklenecekYeniFotograflar.add(kirpilmisFoto));
@@ -2833,7 +2810,7 @@ class _IlanDuzenleFormState extends State<_IlanDuzenleForm> {
                         ),
                       ),
                     ),
-                    // Düzenle İkonu (Kullanıcıya tıklanabileceğini belli etmek için)
+                    // Düzenle İkonu
                     Positioned(
                       bottom: 4, right: 12,
                       child: Container(
@@ -2955,7 +2932,6 @@ class _IlanDuzenleFormState extends State<_IlanDuzenleForm> {
                   icon: Icons.info,
                 ),
 
-                // Sahiplendirme Özel Alanlar
                 if (_isSahiplendirme) ...[
                   _buildTextField(
                     controller: _aliskanlikController,
@@ -3050,7 +3026,6 @@ class _IlanDuzenleFormState extends State<_IlanDuzenleForm> {
             ),
           ),
 
-          // Fotoğraf işlenirken gösterilecek overlay
           if (_fotografIsleniyor)
             Positioned.fill(
               child: Container(

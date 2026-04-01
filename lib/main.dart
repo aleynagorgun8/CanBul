@@ -3,6 +3,7 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart'; //ikonlar için
 import 'package:supabase_flutter/supabase_flutter.dart'; //supabase import
 import 'giris_kayit.dart'; // giriş/kayıt ekranı import
 import 'ana_ekran.dart'; // Giriş yapıldıysa yönlendirilecek ekran
+import 'yapay_zeka_servisi.dart';
 
 void main() async {    //uygulama buradan başlıyor
   WidgetsFlutterBinding.ensureInitialized();
@@ -14,7 +15,6 @@ void main() async {    //uygulama buradan başlıyor
 
   runApp(const MyApp());
 }
-
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -29,11 +29,9 @@ class MyApp extends StatelessWidget {
           seedColor: Colors.green,  //genel tema yeşil tonlarda olacak
           primary: const Color(0xFF558B2F),
           secondary: const Color(0xFFFFB74D),
-          background: const Color(0xFFF1F8E9),
           surface: Colors.white,
-          onSurface: const Color(0xFF558B2F),
         ),
-        useMaterial3: true,   //butonlar kartlar gölgeler vb daha yumuşan görünsün diye modern arayüz
+        useMaterial3: true,   //modern arayüz
         fontFamily: 'Poppins',
       ),
       home: const SplashScreen(),   //uygulama açıldığında ilk gösterilecek ekran
@@ -42,7 +40,7 @@ class MyApp extends StatelessWidget {
 }
 
 // Splash Screen
-class SplashScreen extends StatefulWidget {  //zamanla değişecek bir ekran olduğu için statefulWidget
+class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
   @override
@@ -51,88 +49,71 @@ class SplashScreen extends StatefulWidget {  //zamanla değişecek bir ekran old
 
 class _SplashScreenState extends State<SplashScreen>
     with TickerProviderStateMixin {
-  late AnimationController _scaleController;   //büyüme küçülme animasyonu
-  late AnimationController _fadeController;  //opaklık animasyonu için
-  late AnimationController _pulseController; //logonun büyüyüp küçülmesi için nabız benzeri büyüyüp küçülme
-  late Animation<double> _scaleAnimation;  //logonun o anda ne kadar büyüdüğünü gösterecek
-  late Animation<double> _fadeAnimation;  //opaklık seviyesini gösterir
-  late Animation<double> _pulseAnimation; //nabız efekti için dinamik büyüklük değeridir
+  late AnimationController _scaleController;
+  late AnimationController _fadeController;
+  late AnimationController _pulseController;
+  late Animation<double> _scaleAnimation;
+  late Animation<double> _fadeAnimation;
+  late Animation<double> _pulseAnimation;
 
   @override
-  void initState() {
+  void initState() { // DOĞRU KULLANIM: initState async olamaz, void dönmelidir.
     super.initState();
 
-    // Logo büyüme animasyonu
-    _scaleController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 2),  //animasyon 2 saniye sürecek
-    );
-    _scaleAnimation = CurvedAnimation(
-      parent: _scaleController,
-      curve: Curves.easeInOut,  //yavaş başlar, ortada hızlanır, sonra tekrar yavaşlar
-    );
+    // 1. Animasyon controller'ları
+    _scaleController = AnimationController(vsync: this, duration: const Duration(seconds: 2));
+    _scaleAnimation = CurvedAnimation(parent: _scaleController, curve: Curves.easeInOut);
 
-    // Nabız atışı animasyonu
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1500),
-    );
-    _pulseAnimation = Tween<double>(
-      begin: 1.0,
-      end: 1.1,
-    ).animate(CurvedAnimation(
-      parent: _pulseController,
-      curve: Curves.easeInOut,
-    ));
+    _pulseController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1500));
+    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.1).animate(CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut));
 
-    // Yazı animasyonu
-    _fadeController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 2),
-    );
-    _fadeAnimation = CurvedAnimation(
-      parent: _fadeController,
-      curve: Curves.easeIn,
-    );
+    _fadeController = AnimationController(vsync: this, duration: const Duration(seconds: 2));
+    _fadeAnimation = CurvedAnimation(parent: _fadeController, curve: Curves.easeIn);
 
-    // Animasyonları sırayla başlat
+    // 2. Animasyon akışını başlatan fonksiyonu tetikliyoruz
     _startAnimations();
   }
 
+  // Animasyonların ve Model yüklemenin yapıldığı ana fonksiyon
   void _startAnimations() async {
-    await _scaleController.forward();
+    try {
+      print("🚀 Animasyonlar başlıyor...");
 
-    // Logo büyüdükten sonra nabız atışı başlasın
-    _pulseController.repeat(reverse: true);   //İlk olarak logo yavaşça büyüsün, diğerleri beklesin
+      // 1. Logo büyüme animasyonunu başlat ve bitmesini bekle
+      await _scaleController.forward();
+      _pulseController.repeat(reverse: true);
 
-    // Yazı animasyonu başlasın
-    await _fadeController.forward();
+      // 2. Yapay Zeka Modellerini Yükle
+      print("🧠 [Yapay Zeka] Modeller yüklenmeye başlıyor...");
+      try {
+        YapayZekaServisi aiServisi = YapayZekaServisi();
+        await aiServisi.modelleriBaslat();
+        print("💡 [TEST SONUCU]: BAŞARILI! Modeller RAM'e alındı. 💛💙");
+      } catch (aiError) {
+        print("🚨 [Yapay Zeka Hatası]: $aiError");
+      }
 
-    // 2 saniye daha göster ve geçiş yap
-    await Future.delayed(const Duration(seconds: 2));
+      // 3. Modeller yüklendikten sonra yazı animasyonunu başlat
+      await _fadeController.forward();
 
+      // Kısa bir bekleme (Görsellik için)
+      await Future.delayed(const Duration(seconds: 1));
 
+      // 4. Sayfa Yönlendirme Mantığı
+      if (!mounted) return;
 
-    // Hedef sayfayı belirle
-    Widget hedefSayfa;
+      Widget hedefSayfa;
+      final session = Supabase.instance.client.auth.currentSession;
 
-    // Supabase'de kayıtlı bir oturum var mı kontrol et
-    final session = Supabase.instance.client.auth.currentSession;
+      if (session != null) {
+        final user = Supabase.instance.client.auth.currentUser;
+        String kullaniciAdi = user?.userMetadata?['tam_ad'] ?? 'Kullanıcı';
+        hedefSayfa = AnaEkran(kullaniciAdi: kullaniciAdi);
+      } else {
+        hedefSayfa = const GirisKayitSayfasi();
+      }
 
-    if (session != null) {
-      // Oturum varsa, kullanıcı bilgilerini al (AnaEkran isim istiyor)
-      final user = Supabase.instance.client.auth.currentUser;
-      String kullaniciAdi = user?.userMetadata?['tam_ad'] ?? 'Kullanıcı';
-
-      // Ana Ekrana yönlendir
-      hedefSayfa = AnaEkran(kullaniciAdi: kullaniciAdi);
-    } else {
-      // Oturum yoksa Giriş/Kayıt ekranına yönlendir
-      hedefSayfa = const GirisKayitSayfasi();
-    }
-
-    if (mounted) {
-      Navigator.pushReplacement(   //mevcut splash sayfasını kaldırıp hedef sayfaya gideceğiz
+      Navigator.pushReplacement(
         context,
         PageRouteBuilder(
           pageBuilder: (context, animation, secondaryAnimation) => hedefSayfa,
@@ -142,23 +123,21 @@ class _SplashScreenState extends State<SplashScreen>
             const curve = Curves.easeInOut;
             var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
             var offsetAnimation = animation.drive(tween);
-
             return SlideTransition(
               position: offsetAnimation,
-              child: FadeTransition(
-                opacity: animation,
-                child: child,
-              ),
+              child: FadeTransition(opacity: animation, child: child),
             );
           },
           transitionDuration: const Duration(milliseconds: 800),
         ),
       );
+    } catch (e) {
+      print("🚨 Genel bir hata oluştu: $e");
     }
   }
 
   @override
-  void dispose() {  //sayfa kapatılırken bellekte açık kalabilecek animasyonları kapamak için kullandık RAM gereksiz kullanılmasın diye
+  void dispose() {
     _scaleController.dispose();
     _fadeController.dispose();
     _pulseController.dispose();
@@ -167,151 +146,87 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
-    final Color turuncuPastel = const Color(0xFFFFB74D);  //pastel turuncu ve yeşil renkler
-    final Color yesilPastel = const Color(0xFF558B2F);
+    const Color turuncuPastel = Color(0xFFFFB74D);
+    const Color yesilPastel = Color(0xFF558B2F);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF1F8E9),
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFFF1F8E9),
-              Color(0xFFE8F5E8),
-              Color(0xFFDCEDC8),
-            ],
+            colors: [Color(0xFFF1F8E9), Color(0xFFE8F5E8), Color(0xFFDCEDC8)],
           ),
         ),
-        child: Center(     //öğeler ekrana dikey eksende ortalanıyor
+        child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Ana logo container'ı
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: yesilPastel.withOpacity(0.2),
-                      blurRadius: 20,
-                      spreadRadius: 5,
-                    ),
-                  ],
+                  boxShadow: [BoxShadow(color: yesilPastel.withOpacity(0.2), blurRadius: 20, spreadRadius: 5)],
                 ),
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
-                    // Arka plan halkası
                     ScaleTransition(
                       scale: _scaleAnimation,
                       child: Container(
-                        width: 140,
-                        height: 140,
+                        width: 140, height: 140,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          border: Border.all(
-                            color: turuncuPastel.withOpacity(0.3),
-                            width: 3,
-                          ),
+                          border: Border.all(color: turuncuPastel.withOpacity(0.3), width: 3),
                         ),
                       ),
                     ),
-
-                    // Ana logo
                     ScaleTransition(
                       scale: _pulseAnimation,
                       child: ScaleTransition(
                         scale: _scaleAnimation,
                         child: Container(
-                          width: 120,
-                          height: 120,
+                          width: 120, height: 120,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             gradient: LinearGradient(
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
-                              colors: [
-                                turuncuPastel,
-                                turuncuPastel.withOpacity(0.8),
-                              ],
+                              colors: [turuncuPastel, turuncuPastel.withOpacity(0.8)],
                             ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: turuncuPastel.withOpacity(0.4),
-                                blurRadius: 15,
-                                spreadRadius: 2,
-                              ),
-                            ],
+                            boxShadow: [BoxShadow(color: turuncuPastel.withOpacity(0.4), blurRadius: 15, spreadRadius: 2)],
                           ),
-                          child: const Icon(
-                            FontAwesomeIcons.paw,
-                            size: 50,
-                            color: Colors.white,
-                          ),
+                          child: const Icon(FontAwesomeIcons.paw, size: 50, color: Colors.white),
                         ),
                       ),
                     ),
                   ],
                 ),
               ),
-
               const SizedBox(height: 30),
-
-              // Uygulama adı
               FadeTransition(
                 opacity: _fadeAnimation,
                 child: Column(
                   children: [
                     Text(
                       "CanBul",
-                      style: TextStyle(
-                        fontSize: 36,
-                        fontWeight: FontWeight.w700,
-                        color: yesilPastel,
-                        letterSpacing: 1.5,
-                        fontFamily: 'Poppins',
-                        shadows: [
-                          Shadow(
-                            blurRadius: 10,
-                            color: yesilPastel.withOpacity(0.2),
-                            offset: const Offset(2, 2),
-                          ),
-                        ],
-                      ),
+                      style: TextStyle(fontSize: 36, fontWeight: FontWeight.w700, color: yesilPastel, letterSpacing: 1.5, fontFamily: 'Poppins'),
                     ),
                     const SizedBox(height: 8),
-                    FadeTransition(
-                      opacity: _fadeAnimation,
-                      child: Text(
-                        "Her şey evcil dostlarımız için",
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: yesilPastel.withOpacity(0.8),
-                          fontStyle: FontStyle.italic,
-                          letterSpacing: 0.5,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
+                    Text(
+                      "Her şey evcil dostlarımız için",
+                      style: TextStyle(fontSize: 14, color: yesilPastel.withOpacity(0.8), fontStyle: FontStyle.italic),
+                      textAlign: TextAlign.center,
                     ),
                   ],
                 ),
               ),
-
-              // Yükleniyor göstergesi
               const SizedBox(height: 50),
               FadeTransition(
                 opacity: _fadeAnimation,
-                child: Container(
-                  width: 40,
-                  height: 40,
-                  child: CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(yesilPastel),
-                    strokeWidth: 3,
-                    backgroundColor: yesilPastel.withOpacity(0.2),
-                  ),
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(yesilPastel),
+                  strokeWidth: 3,
                 ),
               ),
             ],

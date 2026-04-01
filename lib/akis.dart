@@ -589,14 +589,29 @@ class _AkisIcerikWidgetState extends State<_AkisIcerikWidget> {
     }
   }
 
+  // --- MÜHENDİSLİK DOKUNUŞU: YORUM PENCERESİ GÜNCELLEMESİ --- ✅
   void _yorumPenceresiniAc(BuildContext context, String ilanId, String ilanTipi) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => _YorumlarModal(ilanId: ilanId, ilanTipi: ilanTipi),
-    ).then((_) {
-      _loadAkis();
+    ).then((_) async {
+      // Pencere kapandığında TÜM SAYFAYI YENİLEME, SADECE bu ilanın yorum sayısını çek!
+      try {
+        final countResponse = await supabase
+            .from('yorumlar')
+            .select('id')
+            .eq('ilan_id', ilanId);
+
+        if (mounted) {
+          setState(() {
+            _yorumSayilari[ilanId] = countResponse.length; // Sadece o kartın sayısını günceller
+          });
+        }
+      } catch (e) {
+        debugPrint("Yorum sayısı güncellenemedi: $e");
+      }
     });
   }
 

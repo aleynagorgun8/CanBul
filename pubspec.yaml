@@ -11,6 +11,8 @@ dependencies:
   flutter:
     sdk: flutter
   font_awesome_flutter: 10.4.0
+  tflite_flutter: ^0.10.1 # Modelleri çalıştırmak için
+  image: ^4.1.3 # Görüntüleri yeniden boyutlandırmak için
   cupertino_icons: ^1.0.6
   supabase_flutter: ^2.0.0
   image_picker: ^0.8.7+5
@@ -27,8 +29,8 @@ dependencies:
   flutter_launcher_icons: ^0.13.1
   image_cropper: ^5.0.1
   path_provider: ^2.1.2
-  shared_preferences: ^2.3.3
-
+  tutorial_coach_mark: 1.2.9
+  shared_preferences: ^2.2.2
 
 flutter_launcher_icons:
   android: "launcher_icon" # Android için ikon dosya ismini belirler
@@ -46,6 +48,9 @@ dev_dependencies:
 flutter:
   uses-material-design: true
 
+
   assets:
     - assets/images/cat.png
     - assets/images/dog.png
+    - assets/yolov8n_float16.tflite
+    - assets/resnet50_feature_extractor.tflite

@@ -17,6 +17,7 @@ import 'mesajlar.dart';
 import 'konum_sec_sayfasi.dart';
 import 'kullanici_profili.dart';
 import 'profil.dart';
+import 'package:timeago/timeago.dart' as timeago;
 
 final supabase = Supabase.instance.client;
 
@@ -665,16 +666,26 @@ class _IlanlarSayfasiState extends State<IlanlarSayfasi> {
         padding: const EdgeInsets.only(bottom: 80, top: 8),
         itemCount: _filtrelenmisIlanlar.length,
         itemBuilder: (context, index) {
-          // İlan List Item'ı, varsa çözülmüş konumu gösterecek
           final ilan = _filtrelenmisIlanlar[index];
-          final cozumlenmisKonum = _cozumlenmisKonumlar[ilan.id]; // Varsa al
+          final cozumlenmisKonum = _cozumlenmisKonumlar[ilan.id];
 
           return IlanListItem(
             ilan: ilan,
             turuncuPastel: turuncuPastel,
             zeytinYesili: zeytinYesili,
             lacivert: lacivert,
-            resolvedLocation: cozumlenmisKonum, // Parametre eklendi
+            resolvedLocation: cozumlenmisKonum,
+            // --- MÜHENDİSLİK DOKUNUŞU: SİLİNME SİNYALİ YAKALANDI --- ✅
+            onSilindi: () {
+              setState(() {
+                _tumIlanlar.removeWhere((i) => i.id == ilan.id);
+                _filtrelenmisIlanlar.removeWhere((i) => i.id == ilan.id);
+              });
+            },
+            // Düzenlendiğinde listeyi tazelemesi için
+            onDuzenlendi: () {
+              _ilanlariYukle();
+            },
           );
         },
       ),
@@ -688,6 +699,8 @@ class IlanListItem extends StatelessWidget {
   final Color zeytinYesili;
   final Color lacivert;
   final String? resolvedLocation;
+  final VoidCallback? onSilindi; // YENİ ✅
+  final VoidCallback? onDuzenlendi; // YENİ ✅
 
   const IlanListItem({
     super.key,
@@ -696,6 +709,8 @@ class IlanListItem extends StatelessWidget {
     required this.zeytinYesili,
     required this.lacivert,
     this.resolvedLocation,
+    this.onSilindi,
+    this.onDuzenlendi,
   });
 
   @override
@@ -726,14 +741,18 @@ class IlanListItem extends StatelessWidget {
       elevation: 3,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: InkWell(
-        // İlan kime ait olursa olsun Detay Sayfasına Git
-        onTap: () {
-          Navigator.push(
+        onTap: () async {
+          // --- MÜHENDİSLİK DOKUNUŞU: DETAY SAYFASININ SONUCUNU BEKLİYORUZ --- ✅
+          final sonuc = await Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => IlanDetaySayfasi(ilan: ilan)),
-          ).then((_) {
-            // Liste sayfasına dönüldüğünde bir şey yapmaya gerek yok, detay sayfasından düzenleme/silme yapılabilir
-          });
+          );
+
+          if (sonuc == 'silindi' && onSilindi != null) {
+            onSilindi!(); // İlan silindi sinyali geldiyse ana listeye haber ver (Anında kaldırır)
+          } else if (sonuc == 'duzenlendi' && onDuzenlendi != null) {
+            onDuzenlendi!(); // İlan düzenlendi sinyali geldiyse listeyi arka planda yenile
+          }
         },
         borderRadius: BorderRadius.circular(16),
         child: Padding(
@@ -752,7 +771,6 @@ class IlanListItem extends StatelessWidget {
                     Text(ilan.kullaniciAdi, style: TextStyle(color: Colors.grey.shade700)),
                     Padding(
                         padding: const EdgeInsets.only(top: 4.0),
-                        // Eğer resolvedLocation varsa onu kullan, yoksa veritabanındaki ham veriyi kullan
                         child: KonumBilgisiWidget(
                             hamKonumVerisi: resolvedLocation ?? ilan.sehir,
                             iconColor: baslikRengi
@@ -788,11 +806,10 @@ class _IlanDetaySayfasiState extends State<IlanDetaySayfasi> {
   final PageController _sayfaKontrolcu = PageController();
   int _mevcutSayfa = 0;
   bool _isLoading = false;
-  late Ilan _gosterilenIlan; // Düzenleme sonrası veriyi güncellemek için
+  late Ilan _gosterilenIlan;
 
   bool get _asiListesiGerekli => (_gosterilenIlan.ilanTipi == 'kayip' || _gosterilenIlan.ilanTipi == 'sahiplendirme') && (_gosterilenIlan.hayvanTuru == 'Kedi' || _gosterilenIlan.hayvanTuru == 'Köpek');
 
-  // Kullanıcının kendi ilanı mı kontrolü
   bool get _isIlanSahibi {
     final currentUserId = supabase.auth.currentUser?.id;
     return currentUserId != null && currentUserId == _gosterilenIlan.kullaniciId;
@@ -865,7 +882,7 @@ class _IlanDetaySayfasiState extends State<IlanDetaySayfasi> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('İlan başarıyla silindi'), backgroundColor: Colors.green));
-        Navigator.pop(context);
+        Navigator.pop(context, 'silindi');
       }
 
     } catch (e) {
@@ -880,7 +897,7 @@ class _IlanDetaySayfasiState extends State<IlanDetaySayfasi> {
       context,
       MaterialPageRoute(builder: (context) => IlanDuzenleEkrani(ilan: _gosterilenIlan)),
     ).then((_) {
-      Navigator.pop(context);
+      Navigator.pop(context, 'duzenlendi');
     });
   }
 
@@ -936,8 +953,7 @@ class _IlanDetaySayfasiState extends State<IlanDetaySayfasi> {
                 ListTile(
                   leading: Icon(Icons.message, color: turuncuPastel),
                   title: const Text('Mesaj Gönder'),
-                  onTap: () async { // ASYNC EKLENDİ
-                    // Modal'ı kapat
+                  onTap: () async {
                     Navigator.pop(context);
 
                     final currentUser = supabase.auth.currentUser;
@@ -948,18 +964,14 @@ class _IlanDetaySayfasiState extends State<IlanDetaySayfasi> {
                       return;
                     }
 
-                    // KONUM VERİSİNİ TEMİZLEME
                     String temizKonum = "";
                     String sehirVerisi = _gosterilenIlan.sehir;
 
-                    // Eğer veri "POINT" ile başlıyorsa veya çok uzunsa (hex formatı) koordinattır, çözmemiz lazım.
                     if (sehirVerisi.startsWith('POINT') || sehirVerisi.length > 40) {
-                      // Koordinatı LatLng nesnesine çevir (Helper fonksiyonunu kullanıyoruz)
                       LatLng? koordinat = _koordinatCozumle(_gosterilenIlan.hamKonum ?? sehirVerisi);
 
                       if (koordinat != null) {
                         try {
-                          // Koordinattan İl/İlçe bul (Geocoding paketi)
                           List<Placemark> placemarks = await placemarkFromCoordinates(
                               koordinat.latitude,
                               koordinat.longitude
@@ -968,21 +980,18 @@ class _IlanDetaySayfasiState extends State<IlanDetaySayfasi> {
                           if (placemarks.isNotEmpty) {
                             Placemark yer = placemarks.first;
                             temizKonum = "${yer.administrativeArea ?? ''}, ${yer.subAdministrativeArea ?? ''}";
-                            if (temizKonum == ", ") temizKonum = ""; // Boş dönerse temizle
+                            if (temizKonum == ", ") temizKonum = "";
                           }
                         } catch (e) {
-                          // Hata olursa (internet yoksa vs.) konum ekleme, boş kalsın.
                           debugPrint("Adres çözümleme hatası: $e");
                         }
                       }
                     } else {
-
                       if (sehirVerisi != 'Konum Bilgisi Yok' && sehirVerisi.isNotEmpty) {
                         temizKonum = sehirVerisi;
                       }
                     }
 
-                    //  MESAJ OLUŞTURMA
                     String otomatikMesaj = "";
 
                     if (_gosterilenIlan.ilanTipi == 'kayip') {
@@ -990,12 +999,10 @@ class _IlanDetaySayfasiState extends State<IlanDetaySayfasi> {
                     } else if (_gosterilenIlan.ilanTipi == 'sahiplendirme') {
                       otomatikMesaj = "Merhaba, ${_gosterilenIlan.hayvanAdi} isimli sahiplendirme ilanınız için yazıyorum.";
                     } else {
-                      // Bulunan Hayvan
                       String konumMetni = temizKonum.isNotEmpty ? "$temizKonum konumunda " : "";
                       otomatikMesaj = "Merhaba, ${konumMetni}bulunan ${_gosterilenIlan.hayvanRengi} ${_gosterilenIlan.hayvanTuru} ilanı için yazıyorum.";
                     }
 
-                    // Sohbet Ekranına Git
                     if (context.mounted) {
                       Navigator.push(
                         context,
@@ -1019,12 +1026,10 @@ class _IlanDetaySayfasiState extends State<IlanDetaySayfasi> {
     );
   }
 
-  // PROFİL SAYFASINA YÖNLENDİRME METODU
   void _profilSayfasinaYonlendir(String kullaniciId) {
     final currentUser = supabase.auth.currentUser;
 
     if (currentUser != null && currentUser.id == kullaniciId) {
-      // Kendi ilanı: Kendi profil sayfasına yönlendir (profil.dart)
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -1032,7 +1037,6 @@ class _IlanDetaySayfasiState extends State<IlanDetaySayfasi> {
         ),
       );
     } else {
-      // Başkasının ilanı: Sadece görüntüleme sayfasına yönlendir.
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -1042,7 +1046,6 @@ class _IlanDetaySayfasiState extends State<IlanDetaySayfasi> {
     }
   }
 
-  // KONUMA YÖNLENDİRME METODU
   Future<void> _konumaYonlendir(String? hamKonumVerisi) async {
     if (hamKonumVerisi == null || hamKonumVerisi.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1051,7 +1054,6 @@ class _IlanDetaySayfasiState extends State<IlanDetaySayfasi> {
       return;
     }
 
-    // POINT(lng lat) formatını LatLng'ye dönüştürme
     final LatLng? koordinat = _koordinatCozumle(hamKonumVerisi);
 
     if (koordinat == null) {
@@ -1062,14 +1064,11 @@ class _IlanDetaySayfasiState extends State<IlanDetaySayfasi> {
     }
 
     try {
-      // Google Haritalar URL'sini oluştur
-
       final String googleMapsUrl =
           'https://www.google.com/maps/dir/?api=1&destination=${koordinat.latitude},${koordinat.longitude}&dir_action=navigate';
 
       final Uri uri = Uri.parse(googleMapsUrl);
 
-      // URL'yi başlat
       if (await canLaunchUrl(uri)) {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
       } else {
@@ -1084,7 +1083,6 @@ class _IlanDetaySayfasiState extends State<IlanDetaySayfasi> {
       debugPrint('Harita başlatma hatası: $e');
     }
   }
-
 
   void _fotografiTamEkranAc(List<String> imageUrls, int initialIndex) {
     Navigator.push(
@@ -1104,7 +1102,22 @@ class _IlanDetaySayfasiState extends State<IlanDetaySayfasi> {
     String baslikMetni = _gosterilenIlan.ilanTipi == 'kayip' ? _gosterilenIlan.hayvanAdi : (_gosterilenIlan.ilanTipi == 'sahiplendirme' ? '${_gosterilenIlan.hayvanAdi} Yuva Arıyor' : 'Bulunan Hayvan');
 
     return Scaffold(
-      appBar: AppBar(title: Text(_gosterilenIlan.hayvanAdi), centerTitle: true),
+      // --- BURAYI GÜNCELLE ---
+      appBar: AppBar(
+        // iOS Tipi Geri Oku
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: Text(
+          _gosterilenIlan.hayvanAdi,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        centerTitle: true,
+        backgroundColor: zeytinYesili, // Arka plan yeşil
+        foregroundColor: Colors.white, // İkon ve yazı beyaz
+      ),
+      // -----------------------
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
@@ -1119,7 +1132,6 @@ class _IlanDetaySayfasiState extends State<IlanDetaySayfasi> {
                   Text(baslikMetni, style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: baslikRengi)),
                   const SizedBox(height: 8),
                   Row(children: [
-                    // İLAN SAHİBİ ADI TIKLANABİLİR ALAN (Profil yönlendirmesi)
                     Expanded(
                       child: GestureDetector(
                         onTap: () => _profilSayfasinaYonlendir(_gosterilenIlan.kullaniciId),
@@ -1135,7 +1147,6 @@ class _IlanDetaySayfasiState extends State<IlanDetaySayfasi> {
                   ]),
                   const Divider(height: 30),
 
-                  // KONUMA YÖNLENDİRME KARTI (Google Maps Başlatır)
                   if (_gosterilenIlan.hamKonum != null)
                     Card(
                       elevation: 4,
@@ -1151,13 +1162,12 @@ class _IlanDetaySayfasiState extends State<IlanDetaySayfasi> {
                         ),
                         subtitle: Text(
                           _gosterilenIlan.sehir.contains('Konum Bilgisi Yok') ? "Konum bilgisi mevcut değil" : "Yol tarifi almak için dokunun (${_gosterilenIlan.sehir})",
-                          style: TextStyle(color: gri),
+                          style: TextStyle(color: Colors.grey),
                         ),
                         trailing: Icon(Icons.directions, color: turuncuPastel, size: 30),
                         onTap: () => _konumaYonlendir(_gosterilenIlan.hamKonum),
                       ),
                     ),
-
 
                   _buildDetailCard('Temel Bilgiler', [
                     _buildInfoRow(Icons.pets, 'Tür: ${_gosterilenIlan.hayvanTuru}'),
@@ -1205,6 +1215,35 @@ class _IlanDetaySayfasiState extends State<IlanDetaySayfasi> {
                       style: const TextStyle(fontSize: 16),
                     ),
                   ]),
+                  const SizedBox(height: 20),
+
+                  // --- MÜHENDİSLİK DOKUNUŞU: YORUMLARI GÖR BUTONU --- ✅
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        // Burada sayfanın en altına eklediğimiz IlanDetayYorumModal sınıfını çağırıyoruz
+                        showModalBottomSheet(
+                          context: context,
+                          isScrollControlled: true,
+                          backgroundColor: Colors.transparent,
+                          builder: (context) => IlanDetayYorumModal(
+                            ilanId: _gosterilenIlan.id,
+                            ilanTipi: _gosterilenIlan.ilanTipi,
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.forum, color: Colors.white),
+                      label: const Text('Yorumları Görüntüle', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: turuncuPastel,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        elevation: 3,
+                      ),
+                    ),
+                  ),
+
                   const SizedBox(height: 40),
                 ],
               ),
@@ -1217,7 +1256,6 @@ class _IlanDetaySayfasiState extends State<IlanDetaySayfasi> {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(color: Colors.white, boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 5)]),
         child: Row(children: [
-          // SOL BUTON: PAYLAŞ (Herkes için aynı)
           Expanded(
             child: ElevatedButton.icon(
               onPressed: () => ilanPaylas(context),
@@ -1228,9 +1266,7 @@ class _IlanDetaySayfasiState extends State<IlanDetaySayfasi> {
           ),
           const SizedBox(width: 16),
 
-          // SAĞ KISIM: İLAN SAHİBİNE GÖRE DEĞİŞİR
           if (!_isIlanSahibi)
-          // Başkasının İlanı -> İLETİŞİM BUTONU
             Expanded(
               child: ElevatedButton.icon(
                 onPressed: () => _iletisimSecenekleriniGoster(context),
@@ -1240,7 +1276,6 @@ class _IlanDetaySayfasiState extends State<IlanDetaySayfasi> {
               ),
             )
           else
-          // Kendi İlanın -> SİL ve DÜZENLE (Yan Yana)
             Expanded(
               child: Row(
                 children: [
@@ -1275,7 +1310,6 @@ class _IlanDetaySayfasiState extends State<IlanDetaySayfasi> {
     );
   }
 
-  // Fotoğraf Galerisi
   Widget _buildFotografGalerisi(Color ikonRengi) {
     final fotolar = _gosterilenIlan.fotoUrlListesi;
     if (fotolar.isEmpty) {
@@ -1356,6 +1390,168 @@ class _IlanDetaySayfasiState extends State<IlanDetaySayfasi> {
   }
 }
 
+// --- MÜHENDİSLİK DOKUNUŞU: YORUM PENCERESİ (İLAN DETAYINA ÖZEL EKLENDİ) --- ✅
+// Bu sınıfı doğrudan _IlanDetaySayfasiState bloğunun BİTİMİNE (altına) yapıştır ki sayfa içinden çağrılabilsin.
+class IlanDetayYorumModal extends StatefulWidget {
+  final String ilanId;
+  final String ilanTipi;
+  const IlanDetayYorumModal({super.key, required this.ilanId, required this.ilanTipi});
+
+  @override
+  State<IlanDetayYorumModal> createState() => _IlanDetayYorumModalState();
+}
+
+class _IlanDetayYorumModalState extends State<IlanDetayYorumModal> {
+  final TextEditingController _yorumController = TextEditingController();
+  bool _gonderiliyor = false;
+
+  final Color turuncuPastel = const Color(0xFFFFB74D);
+  final Color zeytinYesili = const Color(0xFF558B2F);
+  final Color lacivert = const Color(0xFF002D72);
+
+  Stream<List<Map<String, dynamic>>> _yorumlariGetir() {
+    return Supabase.instance.client.from('yorumlar')
+        .stream(primaryKey: ['id'])
+        .eq('ilan_id', widget.ilanId)
+        .order('created_at', ascending: true)
+        .map((data) => List<Map<String, dynamic>>.from(data));
+  }
+
+  Future<Map<String, dynamic>?> _profilGetir(String kullaniciId) async {
+    try {
+      final data = await Supabase.instance.client.from('profiles').select('tam_ad, profil_foto').eq('id', kullaniciId).single();
+      final String? dosyaYolu = data['profil_foto'];
+      if (dosyaYolu != null && dosyaYolu.isNotEmpty) {
+        final String url = await Supabase.instance.client.storage.from('profil_fotolari').createSignedUrl(dosyaYolu, 60);
+        data['profil_foto_url'] = url;
+      }
+      return data;
+    } catch(e) { return null; }
+  }
+
+  void _profilYonlendirme(String targetUserId) {
+    final currentUser = Supabase.instance.client.auth.currentUser;
+    if (currentUser != null && currentUser.id == targetUserId) {
+      Navigator.push(context, MaterialPageRoute(builder: (context) => const Profil()));
+    } else {
+      Navigator.push(context, MaterialPageRoute(builder: (context) => KullaniciProfili(kullaniciId: targetUserId)));
+    }
+  }
+
+  Future<void> _yorumGonder() async {
+    final text = _yorumController.text.trim();
+    if (text.isEmpty) return;
+
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user == null) return;
+
+    setState(() => _gonderiliyor = true);
+    try {
+      await Supabase.instance.client.from('yorumlar').insert({
+        'kullanici_id': user.id,
+        'ilan_id': widget.ilanId,
+        'ilan_tipi': widget.ilanTipi,
+        'yorum': text
+      });
+      _yorumController.clear();
+      FocusScope.of(context).unfocus();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Yorum gönderilemedi.')));
+    } finally {
+      if(mounted) setState(() => _gonderiliyor = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.75,
+      decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      child: Column(
+        children: [
+          Center(child: Container(margin: const EdgeInsets.only(top: 12, bottom: 8), width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)))),
+          Text("Yorumlar", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: lacivert)),
+          const Divider(),
+          Expanded(
+            child: StreamBuilder<List<Map<String, dynamic>>>(
+              stream: _yorumlariGetir(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) return Center(child: CircularProgressIndicator(color: zeytinYesili));
+                final yorumlar = snapshot.data!;
+                if (yorumlar.isEmpty) return const Center(child: Text("Henüz yorum yok. İlk yorumu sen yap!", style: TextStyle(color: Colors.grey)));
+
+                return ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: yorumlar.length,
+                  itemBuilder: (context, index) {
+                    final yorum = yorumlar[index];
+                    final yorumYapanId = yorum['kullanici_id'];
+
+                    return FutureBuilder<Map<String, dynamic>?>(
+                      future: _profilGetir(yorumYapanId),
+                      builder: (context, profilSnapshot) {
+                        final profil = profilSnapshot.data;
+                        final ad = profil?['tam_ad'] ?? 'Kullanıcı';
+                        final fotoUrl = profil?['profil_foto_url'];
+
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8.0),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              GestureDetector(
+                                onTap: () => _profilYonlendirme(yorumYapanId),
+                                child: CircleAvatar(
+                                  radius: 18,
+                                  backgroundColor: zeytinYesili.withOpacity(0.1),
+                                  backgroundImage: fotoUrl != null ? NetworkImage(fotoUrl) : null,
+                                  child: fotoUrl == null ? Icon(Icons.person, size: 20, color: zeytinYesili) : null,
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                  Row(children: [
+                                    GestureDetector(
+                                      onTap: () => _profilYonlendirme(yorumYapanId),
+                                      child: Text(ad, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(timeago.format(DateTime.parse(yorum['created_at']), locale: 'tr'), style: TextStyle(color: Colors.grey[600], fontSize: 12))
+                                  ]),
+                                  const SizedBox(height: 2),
+                                  Text(yorum['yorum'] as String, style: const TextStyle(fontSize: 15)),
+                                ]),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+          Padding(
+            padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom + 16, left: 16, right: 16, top: 8),
+            child: Row(children: [
+              Expanded(child: TextField(
+                  controller: _yorumController,
+                  decoration: InputDecoration(hintText: 'Yorum yap...', filled: true, fillColor: Colors.grey[100], border: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide.none), contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10))
+              )),
+              const SizedBox(width: 8),
+              IconButton(
+                  onPressed: _gonderiliyor ? null : _yorumGonder,
+                  icon: _gonderiliyor ? CircularProgressIndicator(strokeWidth: 2, color: zeytinYesili) : Icon(Icons.send, color: zeytinYesili)
+              )
+            ]),
+          ),
+        ],
+      ),
+    );
+  }
+}
 //TAM EKRAN GALERİ
 class TamEkranGaleri extends StatefulWidget {
   final List<String> imageUrls;
@@ -1395,7 +1591,6 @@ class _TamEkranGaleriState extends State<TamEkranGaleri> {
       body: Stack(
         alignment: Alignment.center,
         children: [
-          // KAYDIRILABİLİR FOTOĞRAFLAR (PageView)
           PageView.builder(
             controller: _pageController,
             itemCount: widget.imageUrls.length,
@@ -1434,7 +1629,6 @@ class _TamEkranGaleriState extends State<TamEkranGaleri> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // Kapat Butonu
                 IconButton(
                   icon: const Icon(Icons.close, color: Colors.white, size: 30),
                   onPressed: () => Navigator.pop(context),
@@ -1463,7 +1657,6 @@ class _TamEkranGaleriState extends State<TamEkranGaleri> {
 }
 
 // KONUM WIDGET
-
 class KonumBilgisiWidget extends StatefulWidget {
   final dynamic hamKonumVerisi;
   final Color iconColor;
@@ -1501,7 +1694,6 @@ class _KonumBilgisiWidgetState extends State<KonumBilgisiWidget> {
       return;
     }
 
-    // GÜVENİLİR AYRIŞTIRMA KULLANILDI
     final LatLng? koordinat = _koordinatCozumle(veri);
 
     if (koordinat == null) {
@@ -1519,7 +1711,6 @@ class _KonumBilgisiWidgetState extends State<KonumBilgisiWidget> {
         setState(() => _adresMetni = adres);
       }
     } catch (geoError) {
-      // Coğrafi çözümleme (geocoding) başarısız olursa ham koordinatları göster
       if (mounted) setState(() => _adresMetni = "${koordinat.latitude.toStringAsFixed(2)}, ${koordinat.longitude.toStringAsFixed(2)}");
     }
   }
@@ -1533,8 +1724,7 @@ class _KonumBilgisiWidgetState extends State<KonumBilgisiWidget> {
   }
 }
 
-//  İLAN DÜZENLEME EKRANI (TAM KOD
-
+//  İLAN DÜZENLEME EKRANI (TAM KOD)
 class IlanDuzenleEkrani extends StatefulWidget {
   final Ilan ilan;
   const IlanDuzenleEkrani({super.key, required this.ilan});
@@ -1750,13 +1940,11 @@ class _IlanDuzenleEkraniState extends State<IlanDuzenleEkrani> {
     }
   }
 
-  //  URL'den Dosya İndirme Yardımcısı
   Future<File?> _downloadFile(String url) async {
     try {
       final response = await http.get(Uri.parse(url));
       if (response.statusCode == 200) {
         final directory = await getTemporaryDirectory();
-        // Geçici bir dosya adı oluştur
         final filePath = '${directory.path}/${DateTime.now().millisecondsSinceEpoch}_temp.jpg';
         final file = File(filePath);
         await file.writeAsBytes(response.bodyBytes);
@@ -1768,7 +1956,6 @@ class _IlanDuzenleEkraniState extends State<IlanDuzenleEkrani> {
     return null;
   }
 
-  // KIRPMA FONKSİYONU
   Future<XFile?> _resmiKirp(XFile dosya) async {
     CroppedFile? croppedFile = await ImageCropper().cropImage(
       sourcePath: dosya.path,
@@ -1800,23 +1987,16 @@ class _IlanDuzenleEkraniState extends State<IlanDuzenleEkrani> {
     return null;
   }
 
-  //  Mevcut Fotoğrafı Kırpma
-
   Future<void> _mevcutFotografiKirp(String url, int index) async {
     setState(() => _fotografIsleniyor = true);
 
-    // URL'den geçici dosyaya indir
     File? tempFile = await _downloadFile(url);
 
     if (tempFile != null && mounted) {
-      //  Kırpma ekranını aç
       XFile? croppedFile = await _resmiKirp(XFile(tempFile.path));
 
       if (croppedFile != null && mounted) {
         setState(() {
-
-
-
           _eklenecekYeniFotograflar.add(croppedFile);
         });
 
@@ -1836,8 +2016,6 @@ class _IlanDuzenleEkraniState extends State<IlanDuzenleEkrani> {
     if(mounted) setState(() => _fotografIsleniyor = false);
   }
 
-
-  // FOTOĞRAF SEÇME FONKSİYONU
   Future<void> _fotoCekVeyaSec() async {
     final source = await showModalBottomSheet<ImageSource>(
       context: context,
@@ -1889,7 +2067,6 @@ class _IlanDuzenleEkraniState extends State<IlanDuzenleEkrani> {
     try {
       const String bucketAdi = 'hayvan_fotograflari';
       final Uri uri = Uri.parse(url);
-      // URL'den dosya yolunu güvenli bir şekilde ayıklama
       final String path = uri.path;
       final String bucketPathIdentifier = '/$bucketAdi/';
       final int startIndex = path.indexOf(bucketPathIdentifier);
@@ -2056,7 +2233,6 @@ class _IlanDuzenleEkraniState extends State<IlanDuzenleEkrani> {
               ),
             ),
           ),
-          // Fotoğraf indirilirken dönen yükleme ekranı
           if (_fotografIsleniyor)
             Container(
               color: Colors.black.withOpacity(0.5),
@@ -2097,7 +2273,6 @@ class _IlanDuzenleEkraniState extends State<IlanDuzenleEkrani> {
         scrollDirection: Axis.horizontal,
         itemCount: _mevcutFotograflar.length + _eklenecekYeniFotograflar.length + 1,
         itemBuilder: (context, index) {
-          // Fotoğraf Ekleme Butonu
           if (index == _mevcutFotograflar.length + _eklenecekYeniFotograflar.length) {
             return GestureDetector(
               onTap: (_yukleniyor || _fotografIsleniyor) ? null : _fotoCekVeyaSec,
@@ -2105,11 +2280,9 @@ class _IlanDuzenleEkraniState extends State<IlanDuzenleEkrani> {
             );
           }
 
-          // Mevcut (Sunucudaki) Fotoğraflar
           if (index < _mevcutFotograflar.length) {
             final url = _mevcutFotograflar[index];
             return Stack(children: [
-              // Fotoğrafa tıklanınca kırpma fonksiyonunu çağır
               GestureDetector(
                 onTap: (_yukleniyor || _fotografIsleniyor) ? null : () => _mevcutFotografiKirp(url, index),
                 child: Container(width: 100, margin: const EdgeInsets.only(right: 8), child: ClipRRect(borderRadius: BorderRadius.circular(8), child: Image.network(url, fit: BoxFit.cover))),
@@ -2117,7 +2290,6 @@ class _IlanDuzenleEkraniState extends State<IlanDuzenleEkrani> {
               Positioned(top: 2, right: 10, child: GestureDetector(onTap: (_yukleniyor || _fotografIsleniyor) ? null : () => _mevcutFotografiSil(url, index), child: const CircleAvatar(radius: 10, backgroundColor: Colors.red, child: Icon(Icons.close, size: 14, color: Colors.white)))),
             ]);
           }
-
 
           final file = _eklenecekYeniFotograflar[index - _mevcutFotograflar.length];
           return Stack(children: [

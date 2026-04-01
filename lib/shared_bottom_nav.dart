@@ -7,9 +7,9 @@ import 'ana_ekran.dart';
 import 'ilanlar.dart';
 import 'profil.dart';
 
-final supabase = Supabase.instance.client;
-
-class SharedBottomNavBar extends StatefulWidget {
+// MÜHENDİSLİK DOKUNUŞU: Sınıfı StatelessWidget yaptık.
+// Artık ana ekran her yenilendiğinde, navbar da anında taze veriyi çekecek! ✅
+class SharedBottomNavBar extends StatelessWidget {
   final int currentIndex;
   final Color turuncuPastel;
   final Color gri;
@@ -23,68 +23,16 @@ class SharedBottomNavBar extends StatefulWidget {
     required this.beyaz,
   });
 
-  @override
-  State<SharedBottomNavBar> createState() => _SharedBottomNavBarState();
-}
-
-class _SharedBottomNavBarState extends State<SharedBottomNavBar> {
-  // Akışları (Streams) hafızada tutmak için değişkenler
-  late final Stream<int> _mesajStream;
-  late final Stream<int> _bildirimStream;
-
-  @override
-  void initState() {
-    super.initState();
-    // Streamleri sayfa ilk açıldığında BİR KERE tanımlıyoruz.
-    // Bu sayede bağlantı sürekli açık kalır ve anlık değişimleri kaçırmaz.
-    _baslatStreamler();
-  }
-
-  void _baslatStreamler() {
-    final myId = supabase.auth.currentUser?.id;
-
-    if (myId == null) {
-      _mesajStream = Stream.value(0);
-      _bildirimStream = Stream.value(0);
-      return;
-    }
-
-    //  MESAJ SAYISI AKIŞI
-    _mesajStream = supabase
-        .from('mesajlar')
-        .stream(primaryKey: ['id'])
-        .eq('alici_id', myId)
-        .map((list) => list.where((m) => m['okundu'] == false).length);
-
-    // BİLDİRİM SAYISI AKIŞI (Anasayfa için)
-    _bildirimStream = supabase
-        .from('bildirimler')
-        .stream(primaryKey: ['id'])
-        .eq('kullanici_id', myId)
-        .map((list) => list.where((b) => b['goruldu'] == false).length);
-  }
-
   void _handleTap(BuildContext context, int index) {
-    if (index == widget.currentIndex) return;
+    if (index == currentIndex) return;
     Widget page;
     switch (index) {
-      case 0:
-        page = const AkisSayfasi();
-        break;
-      case 1:
-        page = const HaritaSayfasi();
-        break;
-      case 2:
-        page = const AnaEkran(kullaniciAdi: '');
-        break;
-      case 3:
-        page = const IlanlarSayfasi();
-        break;
-      case 4:
-        page = const Profil();
-        break;
-      default:
-        page = const AnaEkran(kullaniciAdi: '');
+      case 0: page = const AkisSayfasi(); break;
+      case 1: page = const HaritaSayfasi(); break;
+      case 2: page = const AnaEkran(kullaniciAdi: ''); break;
+      case 3: page = const IlanlarSayfasi(); break;
+      case 4: page = const Profil(); break;
+      default: page = const AnaEkran(kullaniciAdi: '');
     }
 
     Navigator.pushReplacement(
@@ -100,86 +48,118 @@ class _SharedBottomNavBarState extends State<SharedBottomNavBar> {
 
   @override
   Widget build(BuildContext context) {
+    final myId = Supabase.instance.client.auth.currentUser?.id;
+
+    if (myId == null) {
+      return _buildBottomNav(context, 0, 0); // Giriş yapılmadıysa sıfır gönder
+    }
+
+    // 1. MESAJLAR AKIŞI
+    return StreamBuilder<List<Map<String, dynamic>>>(
+      stream: Supabase.instance.client
+          .from('mesajlar')
+          .stream(primaryKey: ['id'])
+          .eq('alici_id', myId),
+      builder: (context, mesajSnapshot) {
+
+        // 2. SOSYAL BİLDİRİMLER AKIŞI
+        return StreamBuilder<List<Map<String, dynamic>>>(
+          stream: Supabase.instance.client
+              .from('bildirimler')
+              .stream(primaryKey: ['id'])
+              .eq('kullanici_id', myId),
+          builder: (context, sosyalSnapshot) {
+
+            // 3. EŞLEŞMELER AKIŞI (Ana ekrandaki mantığın birebir aynısı) ✅
+            return StreamBuilder<List<Map<String, dynamic>>>(
+              stream: Supabase.instance.client
+                  .from('eslesmeler')
+                  .stream(primaryKey: ['id'])
+                  .eq('kontrol_edildi', false)
+                  .asyncMap((tumEslesmeler) async {
+                final benimIlanlarim = await Supabase.instance.client
+                    .from('kayip_ilanlar')
+                    .select('id')
+                    .eq('kullanici_id', myId);
+                final benimIdSetim = benimIlanlarim.map((e) => e['id'].toString()).toSet();
+                return tumEslesmeler.where((e) => benimIdSetim.contains(e['kayip_ilan_id'].toString())).toList();
+              }),
+              builder: (context, eslesmeSnapshot) {
+
+                // --- SAYIM İŞLEMLERİ ---
+                int mesajSayisi = 0;
+                if (mesajSnapshot.hasData) {
+                  mesajSayisi = mesajSnapshot.data!.where((m) => m['okundu'] == false).length;
+                }
+
+                int bildirimSayisi = 0;
+                if (sosyalSnapshot.hasData) {
+                  bildirimSayisi = sosyalSnapshot.data!.where((b) => b['goruldu'] == false).length;
+                }
+
+                int eslesmeSayisi = 0;
+                if (eslesmeSnapshot.hasData) {
+                  final benzersizBasliklar = eslesmeSnapshot.data!.map((e) => e['kayip_ilan_id'].toString()).toSet();
+                  eslesmeSayisi = benzersizBasliklar.length;
+                }
+
+                // Ana Ekranda Görünecek Toplam Sayı (Sosyal + Eşleşme)
+                int anaEkranToplamBildirim = bildirimSayisi + eslesmeSayisi;
+
+                return _buildBottomNav(context, mesajSayisi, anaEkranToplamBildirim);
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // --- ARAYÜZ OLUŞTURUCU (Tasarım kısmı) ---
+  Widget _buildBottomNav(BuildContext context, int mesajSayisi, int anaEkranToplamBildirim) {
     return Container(
       decoration: BoxDecoration(
         boxShadow: [
           BoxShadow(
-            color: widget.gri.withOpacity(0.2),
+            color: gri.withOpacity(0.2),
             blurRadius: 10,
             offset: const Offset(0, -2),
           ),
         ],
       ),
-      // StreamBuilder'ları iç içe kullanıyoruz ama stream kaynakları sabit (initState'ten geliyor)
-      child: StreamBuilder<int>(
-        stream: _mesajStream, // Sabit Stream
-        initialData: 0,
-        builder: (context, snapshotMesaj) {
-          final int mesajSayisi = snapshotMesaj.data ?? 0;
-
-          return StreamBuilder<int>(
-            stream: _bildirimStream, // Sabit Stream
-            initialData: 0,
-            builder: (context, snapshotBildirim) {
-              final int bildirimSayisi = snapshotBildirim.data ?? 0;
-
-              return BottomNavigationBar(
-                currentIndex: widget.currentIndex,
-                backgroundColor: widget.beyaz,
-                selectedItemColor: widget.turuncuPastel,
-                unselectedItemColor: widget.gri,
-                selectedLabelStyle: TextStyle(color: widget.turuncuPastel),
-                unselectedLabelStyle: TextStyle(color: widget.gri),
-                type: BottomNavigationBarType.fixed,
-                onTap: (index) => _handleTap(context, index),
-                items: [
-                  // 0. AKIŞ
-                  BottomNavigationBarItem(
-                    icon: _buildIconWithBadge(
-                      icon: Icons.timeline,
-                      count: mesajSayisi,
-                      badgeColor: Colors.blue,
-                    ),
-                    label: 'Akış',
-                  ),
-
-                  // 1. HARİTA
-                  const BottomNavigationBarItem(icon: Icon(Icons.map), label: 'Harita'),
-
-                  // 2. ANA SAYFA 
-                  BottomNavigationBarItem(
-                    icon: _buildIconWithBadge(
-                      icon: Icons.home,
-                      count: bildirimSayisi,
-                      badgeColor: const Color(0xFFFFB74D),
-                    ),
-                    label: 'Ana Sayfa',
-                  ),
-
-                  // 3. İLANLAR
-                  const BottomNavigationBarItem(icon: Icon(Icons.list_alt), label: 'İlanlar'),
-
-                  // 4. PROFİL
-                  const BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profil'),
-                ],
-              );
-            },
-          );
-        },
+      child: BottomNavigationBar(
+        currentIndex: currentIndex,
+        backgroundColor: beyaz,
+        selectedItemColor: turuncuPastel,
+        unselectedItemColor: gri,
+        selectedLabelStyle: TextStyle(color: turuncuPastel),
+        unselectedLabelStyle: TextStyle(color: gri),
+        type: BottomNavigationBarType.fixed,
+        onTap: (index) => _handleTap(context, index),
+        items: [
+          BottomNavigationBarItem(
+            icon: _buildIconWithBadge(icon: Icons.timeline, count: mesajSayisi, badgeColor: Colors.blue),
+            label: 'Akış',
+          ),
+          const BottomNavigationBarItem(icon: Icon(Icons.map), label: 'Harita'),
+          BottomNavigationBarItem(
+            icon: _buildIconWithBadge(
+                icon: Icons.home,
+                count: anaEkranToplamBildirim,
+                badgeColor: const Color(0xFFFFB74D) // Sarı pastel rengimiz
+            ),
+            label: 'Ana Sayfa',
+          ),
+          const BottomNavigationBarItem(icon: Icon(Icons.list_alt), label: 'İlanlar'),
+          const BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profil'),
+        ],
       ),
     );
   }
 
-  // Rozet Oluşturucu
-  Widget _buildIconWithBadge({
-    required IconData icon,
-    required int count,
-    required Color badgeColor
-  }) {
-    if (count <= 0) {
-      return Icon(icon);
-    }
-
+  // Rozet (Badge) Tasarımı
+  Widget _buildIconWithBadge({required IconData icon, required int count, required Color badgeColor}) {
+    if (count <= 0) return Icon(icon);
     return Stack(
       clipBehavior: Clip.none,
       children: [
@@ -194,18 +174,11 @@ class _SharedBottomNavBarState extends State<SharedBottomNavBar> {
               shape: BoxShape.circle,
               border: Border.all(color: Colors.white, width: 1.5),
             ),
-            constraints: const BoxConstraints(
-              minWidth: 18,
-              minHeight: 18,
-            ),
+            constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
             child: Center(
               child: Text(
                 count > 99 ? '99+' : '$count',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 9,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
                 textAlign: TextAlign.center,
               ),
             ),

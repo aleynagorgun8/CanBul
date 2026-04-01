@@ -94,8 +94,10 @@ class _MesajlarSayfasiState extends State<MesajlarSayfasi> {
         title: const Text('Mesajlar', style: TextStyle(color: beyaz, fontWeight: FontWeight.bold)),
         backgroundColor: zeytinYesili,
         elevation: 0,
-        leading: IconButton(icon: const Icon(Icons.arrow_back, color: beyaz), onPressed: () => Navigator.pop(context)),
-      ),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, color: beyaz), // ios oku
+          onPressed: () => Navigator.pop(context),
+        ),      ),
       body: Column(
         children: [
           Container(
@@ -411,7 +413,10 @@ class _SohbetEkraniState extends State<SohbetEkrani> {
         backgroundColor: zeytinYesili,
         elevation: 1,
         titleSpacing: 0,
-        leading: IconButton(icon: const Icon(Icons.arrow_back, color: beyaz), onPressed: () => Navigator.pop(context)),
+    leading: IconButton(
+    icon: const Icon(Icons.arrow_back_ios_new, color: beyaz), // ios oku
+    onPressed: () => Navigator.pop(context),
+    ),
         title: InkWell(
           onTap: _profileGit,
           child: Row(

@@ -37,11 +37,11 @@ class _EslesmeDetaySayfasiState extends State<EslesmeDetaySayfasi> {
 
   // Telefonun yerel hafızasından (Local Storage) gizlenmiş ilanları okuyan fonksiyon
   Future<void> _hafizadanGizlenenleriGetir() async {
-    final prefs = await SharedPreferences.getInstance();
+    final tercihKaydi = await SharedPreferences.getInstance();
     final kullaniciId = Supabase.instance.client.auth.currentUser?.id ?? 'anonim';
 
     // Her kullanıcıya özel bir hafıza anahtarı ile veriyi çekiyoruz
-    final List<String> kayitliListe = prefs.getStringList('gizli_ilanlar_$kullaniciId') ?? [];
+    final List<String> kayitliListe = tercihKaydi.getStringList('gizli_ilanlar_$kullaniciId') ?? [];
 
     setState(() {
       _gizlenenIlanlar = kayitliListe.toSet();
@@ -50,29 +50,38 @@ class _EslesmeDetaySayfasiState extends State<EslesmeDetaySayfasi> {
   }
 
   // Gizle/Göster butonuna basıldığında hem ekranı hem hafızayı güncelleyen fonksiyon
-  Future<void> _gizleDurumunuDegistir(String bulunanId, bool suAnGizliMi) async {
-    final prefs = await SharedPreferences.getInstance();
+  Future<void> _gizleDurumunuDegistir(String bulunanIlanId, bool suAnGizliMi) async {
+    final tercihKaydi = await SharedPreferences.getInstance();
     final kullaniciId = Supabase.instance.client.auth.currentUser?.id ?? 'anonim';
 
     setState(() {
       if (suAnGizliMi) {
-        _gizlenenIlanlar.remove(bulunanId);
+        _gizlenenIlanlar.remove(bulunanIlanId);
       } else {
-        _gizlenenIlanlar.add(bulunanId);
+        _gizlenenIlanlar.add(bulunanIlanId);
       }
     });
 
     // Güncel listeyi telefonun hafızasına kalıcı olarak kaydet
-    await prefs.setStringList('gizli_ilanlar_$kullaniciId', _gizlenenIlanlar.toList());
+    await tercihKaydi.setStringList('gizli_ilanlar_$kullaniciId', _gizlenenIlanlar.toList());
   }
 
   @override
   Widget build(BuildContext context) {
-    final List<Map<String, dynamic>> tumEslesmeler = widget.grupVerisi['eslesmeler'];
+    // 1. Gelen ham veriyi listeye alıyoruz
+    final List<Map<String, dynamic>> tumEslesmeler = List<Map<String, dynamic>>.from(widget.grupVerisi['eslesmeler']);
 
+    // 2. SIRALAMA: En yüksek skor (benzerlik) en üstte olsun
+    tumEslesmeler.sort((a, b) {
+      double skorA = double.tryParse(a['eslesme_skoru'].toString()) ?? 0.0;
+      double skorB = double.tryParse(b['eslesme_skoru'].toString()) ?? 0.0;
+      return skorB.compareTo(skorA);
+    });
+
+    // 3. FİLTRELEME: Gizleme mantığını uyguluyoruz
     final List<Map<String, dynamic>> gosterilecekEslesmeler = tumEslesmeler.where((eslesme) {
-      final String bulunanId = eslesme['bulunan_ilan_id'].toString();
-      final bool gizliMi = _gizlenenIlanlar.contains(bulunanId);
+      final String ilanId = eslesme['bulunan_ilan_id'].toString();
+      final bool gizliMi = _gizlenenIlanlar.contains(ilanId);
 
       if (_gizlileriGoster) {
         return true;
@@ -84,15 +93,25 @@ class _EslesmeDetaySayfasiState extends State<EslesmeDetaySayfasi> {
     return Scaffold(
       backgroundColor: arkaPlan,
       appBar: AppBar(
-        title: const Text("Tüm Eşleşmeler"),
-        backgroundColor: sariPastel,
-        foregroundColor: Colors.black,
+        title: const Text(
+          "Tüm Eşleşmeler",
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        // Tasarım isteğine göre Zeytin Yeşili ve Oval Köşeler eklendi
+        backgroundColor: zeytinYesili,
+        foregroundColor: Colors.white,
         centerTitle: true,
+        elevation: 4,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(
+            bottom: Radius.circular(25),
+          ),
+        ),
         actions: [
           IconButton(
             icon: Icon(
               _gizlileriGoster ? Icons.visibility : Icons.visibility_off,
-              color: Colors.black87,
+              color: Colors.white,
             ),
             tooltip: _gizlileriGoster ? "Gizlenenleri Kapat" : "Gizlenenleri Göster",
             onPressed: () {
@@ -108,19 +127,20 @@ class _EslesmeDetaySayfasiState extends State<EslesmeDetaySayfasi> {
           : gosterilecekEslesmeler.isEmpty
           ? const Center(child: Text("Gösterilecek eşleşme bulunmuyor."))
           : ListView.builder(
-        padding: const EdgeInsets.symmetric(vertical: 10),
+        // AppBar oval olduğu için içeriği biraz aşağıdan başlatıyoruz
+        padding: const EdgeInsets.only(top: 20, bottom: 10),
         itemCount: gosterilecekEslesmeler.length,
         itemBuilder: (context, index) {
           final eslesmeVerisi = gosterilecekEslesmeler[index];
-          final String bulunanId = eslesmeVerisi['bulunan_ilan_id'].toString();
-          final bool gizliMi = _gizlenenIlanlar.contains(bulunanId);
+          final String bulunanIlanId = eslesmeVerisi['bulunan_ilan_id'].toString();
+          final bool gizliMi = _gizlenenIlanlar.contains(bulunanIlanId);
 
           return _EslesmeKarti(
-            key: ValueKey(bulunanId),
+            key: ValueKey(bulunanIlanId),
             eslesmeVerisi: eslesmeVerisi,
             sira: index + 1,
             gizliMi: gizliMi,
-            onGizleTetiklendi: () => _gizleDurumunuDegistir(bulunanId, gizliMi),
+            onGizleTetiklendi: () => _gizleDurumunuDegistir(bulunanIlanId, gizliMi),
           );
         },
       ),
@@ -160,14 +180,14 @@ class _EslesmeKartiState extends State<_EslesmeKarti> {
 
   Future<void> _fotolariHazirla() async {
     try {
-      final kaynakRes = await Supabase.instance.client
+      final kayipResimSonucu = await Supabase.instance.client
           .from('ilan_fotograflari')
           .select('foto_url')
           .eq('ilan_id', widget.eslesmeVerisi['kayip_ilan_id'])
           .limit(1)
           .maybeSingle();
 
-      final hedefRes = await Supabase.instance.client
+      final bulunanResimSonucu = await Supabase.instance.client
           .from('ilan_fotograflari')
           .select('foto_url')
           .eq('ilan_id', widget.eslesmeVerisi['bulunan_ilan_id'])
@@ -176,7 +196,7 @@ class _EslesmeKartiState extends State<_EslesmeKarti> {
 
       const String kovaAdi = 'hayvan_fotograflari';
 
-      String? yolTemizle(String? tamUrl) {
+      String? yolTemizleyici(String? tamUrl) {
         if (tamUrl == null) return null;
         if (tamUrl.contains('$kovaAdi/')) return tamUrl.split('$kovaAdi/').last;
         return tamUrl;
@@ -185,13 +205,13 @@ class _EslesmeKartiState extends State<_EslesmeKarti> {
       String? geciciKayipUrl;
       String? geciciBulunanUrl;
 
-      if (kaynakRes != null && kaynakRes['foto_url'] != null) {
-        String temizYol = yolTemizle(kaynakRes['foto_url'].toString())!;
+      if (kayipResimSonucu != null && kayipResimSonucu['foto_url'] != null) {
+        String temizYol = yolTemizleyici(kayipResimSonucu['foto_url'].toString())!;
         geciciKayipUrl = await Supabase.instance.client.storage.from(kovaAdi).createSignedUrl(temizYol, 3600);
       }
 
-      if (hedefRes != null && hedefRes['foto_url'] != null) {
-        String temizYol = yolTemizle(hedefRes['foto_url'].toString())!;
+      if (bulunanResimSonucu != null && bulunanResimSonucu['foto_url'] != null) {
+        String temizYol = yolTemizleyici(bulunanResimSonucu['foto_url'].toString())!;
         geciciBulunanUrl = await Supabase.instance.client.storage.from(kovaAdi).createSignedUrl(temizYol, 3600);
       }
 
@@ -212,31 +232,31 @@ class _EslesmeKartiState extends State<_EslesmeKarti> {
     try {
       final String karsiIlanId = widget.eslesmeVerisi['bulunan_ilan_id'].toString();
 
-      final ilanDetay = await Supabase.instance.client.from('bulunan_ilanlar').select('id, kullanici_id, hayvan_turu, hayvan_rengi, hayvan_cinsiyeti, ekstra_bilgi, konum, konum_text, created_at, profiles(tam_ad, telefon)').eq('id', karsiIlanId).maybeSingle();
+      final ilanDetayBilgisi = await Supabase.instance.client.from('bulunan_ilanlar').select('id, kullanici_id, hayvan_turu, hayvan_rengi, hayvan_cinsiyeti, ekstra_bilgi, konum, konum_text, created_at, profiles(tam_ad, telefon)').eq('id', karsiIlanId).maybeSingle();
 
-      if (ilanDetay == null) {
+      if (ilanDetayBilgisi == null) {
         if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Bu ilan sistemden kaldırılmış olabilir.")));
         return;
       }
 
-      final List<dynamic> fotos = await Supabase.instance.client.from('ilan_fotograflari').select('foto_url').eq('ilan_id', karsiIlanId).eq('ilan_tipi', 'bulunan');
-      final List<String> fotoUrls = fotos.map((e) => e['foto_url'] as String).toList();
+      final List<dynamic> fotografListesi = await Supabase.instance.client.from('ilan_fotograflari').select('foto_url').eq('ilan_id', karsiIlanId).eq('ilan_tipi', 'bulunan');
+      final List<String> temizFotoUrlleri = fotografListesi.map((e) => e['foto_url'] as String).toList();
 
-      final profileData = ilanDetay['profiles'] as Map<String, dynamic>?;
+      final profilVerisi = ilanDetayBilgisi['profiles'] as Map<String, dynamic>?;
 
       final Ilan ilanNesnesi = Ilan.fromMap(
-        data: ilanDetay,
+        data: ilanDetayBilgisi,
         tip: 'bulunan',
-        fotoUrls: fotoUrls,
-        kullaniciTel: profileData?['telefon'] ?? '',
-        kullaniciAd: profileData?['tam_ad'] ?? 'Kullanıcı',
+        fotoUrls: temizFotoUrlleri,
+        kullaniciTel: profilVerisi?['telefon'] ?? '',
+        kullaniciAd: profilVerisi?['tam_ad'] ?? 'Kullanıcı',
       );
 
       if (mounted) {
         Navigator.push(context, MaterialPageRoute(builder: (context) => IlanDetaySayfasi(ilan: ilanNesnesi)));
       }
-    } catch (e) {
-      debugPrint("Detay Yönlendirme Hatası: $e");
+    } catch (hata) {
+      debugPrint("Detay Yönlendirme Hatası: $hata");
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("İlan detayları yüklenirken bir hata oluştu.")));
     }
   }
@@ -246,7 +266,6 @@ class _EslesmeKartiState extends State<_EslesmeKarti> {
     final String? benimFotoUrl = _kayipFotoUrl;
     final String? karsiFotoUrl = _bulunanFotoUrl;
 
-    // Gizli olan kartları soluk (opacity: 0.5) gösteriyoruz
     return Opacity(
       opacity: widget.gizliMi ? 0.5 : 1.0,
       child: Card(
@@ -257,7 +276,6 @@ class _EslesmeKartiState extends State<_EslesmeKarti> {
           padding: const EdgeInsets.all(16),
           child: Column(
             children: [
-              // --- SKOR VE MESAFE BÖLÜMÜ ---
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -275,7 +293,6 @@ class _EslesmeKartiState extends State<_EslesmeKarti> {
                       ),
                     ],
                   ),
-                  // Mesafe bilgisini tekrar ekledik!
                   Text(
                     "${widget.eslesmeVerisi['mesafe_km'] ?? '??'} km",
                     style: const TextStyle(color: Colors.grey, fontWeight: FontWeight.bold, fontSize: 13),
@@ -331,20 +348,20 @@ class _EslesmeKartiState extends State<_EslesmeKarti> {
     );
   }
 
-  Widget _fotoKutusu(String baslik, String? url) {
+  Widget _fotoKutusu(String baslikMetni, String? urlAdresi) {
     return Expanded(
       child: Column(
         children: [
-          Text(baslik, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.grey, fontSize: 12)),
+          Text(baslikMetni, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.grey, fontSize: 12)),
           const SizedBox(height: 8),
           Container(
             height: 140,
             decoration: BoxDecoration(
               color: Colors.grey.shade200,
               borderRadius: BorderRadius.circular(12),
-              image: url != null ? DecorationImage(image: NetworkImage(url), fit: BoxFit.cover) : null,
+              image: urlAdresi != null ? DecorationImage(image: NetworkImage(urlAdresi), fit: BoxFit.cover) : null,
             ),
-            child: url == null
+            child: urlAdresi == null
                 ? Center(child: _yukleniyor ? const CircularProgressIndicator(color: zeytinYesili) : const Icon(Icons.broken_image, size: 30, color: Colors.grey))
                 : null,
           ),
